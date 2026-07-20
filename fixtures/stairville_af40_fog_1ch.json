@@ -1,0 +1,10 @@
+{
+  "schema": "lightengine.fixture.v1",
+  "id": "stairville_af40_fog_1ch",
+  "name": "Stairville AF-40 DMX Fog",
+  "kind": "fog",
+  "channels": 1,
+  "capabilities": {
+    "fog": { "channel": 1, "type": "switch", "label": "Fog Output" }
+  }
+}

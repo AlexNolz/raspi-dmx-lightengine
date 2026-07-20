@@ -1,0 +1,24 @@
+{
+  "schema": "lightengine.fixture.v1",
+  "id": "zkymzl_11ch",
+  "name": "ZKYMZL 11CH Moving Head",
+  "kind": "moving_head",
+  "channels": 11,
+  "capabilities": {
+    "pan": { "channel": 1, "type": "position", "label": "Pan" },
+    "tilt": { "channel": 2, "type": "position", "label": "Tilt" },
+    "color": { "channel": 5, "type": "wheel", "label": "Color Wheel" },
+    "gobo": { "channel": 6, "type": "wheel", "label": "Gobo Wheel" },
+    "dimmer": { "channel": 9, "type": "intensity", "label": "Dimmer" },
+    "strobe": { "channel": 10, "type": "strobe", "label": "Strobe" },
+    "reset": { "channel": 11, "type": "maintenance", "label": "Reset" }
+  },
+  "calibration": {
+    "pan_min": 0.14,
+    "pan_max": 0.54,
+    "pan_center": 0.333,
+    "pan_width": 0.30,
+    "tilt_min": 0.56,
+    "tilt_max": 0.82
+  }
+}

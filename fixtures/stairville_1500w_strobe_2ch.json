@@ -1,0 +1,11 @@
+{
+  "schema": "lightengine.fixture.v1",
+  "id": "stairville_1500w_strobe_2ch",
+  "name": "Stairville 1500W Strobe",
+  "kind": "strobe",
+  "channels": 2,
+  "capabilities": {
+    "brightness": { "channel": 1, "type": "intensity", "label": "Brightness" },
+    "speed": { "channel": 2, "type": "strobe", "label": "Speed" }
+  }
+}

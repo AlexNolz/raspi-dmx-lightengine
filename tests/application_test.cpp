@@ -202,24 +202,37 @@ int main() {
     }
 
     {
-        lightengine::LightProject project{
+        std::vector<lightengine::FixtureDefinition> definitions{
+            lightengine::FixtureDefinition{
+                "rgb-bar",
+                "RGB Bar",
+                lightengine::FixtureKind::rgb_bar,
+                24,
+                {
+                    {"red", lightengine::DmxCapability{"red", "Red", 1}},
+                    {"green", lightengine::DmxCapability{"green", "Green", 2}},
+                    {"blue", lightengine::DmxCapability{"blue", "Blue", 3}},
+                },
+            },
+        };
+        lightengine::ShowProject project{
             "default",
             "Default Project",
-            {lightengine::FixtureProfile{"rgb-bar", "RGB Bar", lightengine::FixtureKind::rgb_bar, 24}},
             {lightengine::FixturePatch{"bar-1", "Bar 1", "rgb-bar", lightengine::ArtNetUniverse{0}, lightengine::DmxAddress{1}, true}},
-            {lightengine::ShowScene{"scene-1", "Scene 1"}},
+            {lightengine::ShowPreset{"club", "Club", 58, {"pulse"}, {"center_pulse"}}},
+            {lightengine::ShowScene{"scene-1", "Scene 1", {"pulse"}, {"center_pulse"}}},
         };
 
         try {
-            lightengine::validate_project(project);
+            lightengine::validate_show_project(project, definitions);
         } catch (const std::exception& error) {
             std::cerr << "Valid project was rejected: " << error.what() << '\n';
             return 1;
         }
 
-        project.fixtures.at(0).profile_id = "missing";
+        project.patch.at(0).fixture_definition_id = "missing";
         try {
-            lightengine::validate_project(project);
+            lightengine::validate_show_project(project, definitions);
             std::cerr << "Invalid project was accepted\n";
             return 1;
         } catch (const std::invalid_argument&) {

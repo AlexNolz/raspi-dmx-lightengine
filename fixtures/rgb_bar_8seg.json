@@ -1,0 +1,25 @@
+{
+  "schema": "lightengine.fixture.v1",
+  "id": "rgb_bar_8seg",
+  "name": "RGB Bar 8 Segment",
+  "kind": "rgb_bar",
+  "channels": 24,
+  "segments": 8,
+  "capabilities": {
+    "segment_1_red": { "channel": 1, "type": "intensity", "label": "Segment 1 Red" },
+    "segment_1_green": { "channel": 2, "type": "intensity", "label": "Segment 1 Green" },
+    "segment_1_blue": { "channel": 3, "type": "intensity", "label": "Segment 1 Blue" },
+    "segment_2_red": { "channel": 4, "type": "intensity", "label": "Segment 2 Red" },
+    "segment_2_green": { "channel": 5, "type": "intensity", "label": "Segment 2 Green" },
+    "segment_2_blue": { "channel": 6, "type": "intensity", "label": "Segment 2 Blue" }
+  },
+  "pattern": {
+    "repeat": 8,
+    "stride": 3,
+    "channels": {
+      "red": 1,
+      "green": 2,
+      "blue": 3
+    }
+  }
+}
