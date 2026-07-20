@@ -77,7 +77,10 @@ BeatSnapshot BeatClock::snapshot(const std::chrono::steady_clock::time_point now
 }
 
 SimpleEngine::SimpleEngine(SimpleEngineConfig config)
-    : config_{std::move(config)}, preview_(static_cast<std::size_t>(config_.segments_per_bar) * 2U) {}
+    : config_{std::move(config)},
+      preview_(static_cast<std::size_t>(config_.segments_per_bar) * 2U),
+      bar1_{DmxAddress{config_.bar1_start}, config_.segments_per_bar},
+      bar2_{DmxAddress{config_.bar2_start}, config_.segments_per_bar} {}
 
 void SimpleEngine::apply_os2l_event(const Os2lEvent& event, const std::chrono::steady_clock::time_point received_at) {
     std::lock_guard lock{mutex_};
@@ -168,6 +171,8 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
     std::lock_guard lock{mutex_};
     DmxFrame frame{};
     std::fill(preview_.begin(), preview_.end(), Rgb{});
+    bar1_.clear();
+    bar2_.clear();
 
     if (!running_ || blackout_ || blackout_held_ || !led_layer_enabled_) {
         return frame;
@@ -175,8 +180,17 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
 
     const BeatSnapshot beat = beat_clock_.snapshot(now);
     const double master = master_ * led_master_;
-    render_bar(frame, config_.bar1_start, beat, master);
-    render_bar(frame, config_.bar2_start, beat, master);
+    render_bar(bar1_, beat, master);
+    render_bar(bar2_, beat, master);
+    bar1_.render_to(frame);
+    bar2_.render_to(frame);
+
+    for (std::size_t index = 0; index < bar1_.size(); ++index) {
+        preview_.at(index) = bar1_.wash_color(index);
+    }
+    for (std::size_t index = 0; index < bar2_.size(); ++index) {
+        preview_.at(index + bar1_.size()) = bar2_.wash_color(index);
+    }
     return frame;
 }
 
@@ -254,11 +268,11 @@ void SimpleEngine::mark_artnet_packet_sent() {
     ++artnet_packets_;
 }
 
-void SimpleEngine::render_bar(DmxFrame& frame, const std::uint16_t start_channel, const BeatSnapshot& beat, const double master) {
+void SimpleEngine::render_bar(RgbWashBar& bar, const BeatSnapshot& beat, const double master) {
     const bool beat_drive = contains(active_scenes_, "beat_drive") || contains(active_scenes_, "center_pulse");
     const double hit = beat_drive ? std::exp(-beat.phase * 7.0) * (0.45 + beat.strength * 0.55) : 0.25;
     const double mood = static_cast<double>(mood_) / 100.0;
-    for (std::uint8_t segment = 0; segment < config_.segments_per_bar; ++segment) {
+    for (std::size_t segment = 0; segment < bar.size(); ++segment) {
         const double chase = std::sin((beat.beat * 0.45) + static_cast<double>(segment) * 0.7) * 0.5 + 0.5;
         const double level = clamp01((0.08 + hit + chase * 0.22) * master);
         Rgb color{
@@ -269,27 +283,10 @@ void SimpleEngine::render_bar(DmxFrame& frame, const std::uint16_t start_channel
         if (whiteout_held_ || strobe_out_held_) {
             color = Rgb{to_dmx(master), to_dmx(master), to_dmx(master)};
         } else if (color_strobe_held_) {
-            color = (segment + static_cast<std::uint8_t>(std::floor(beat.beat))) % 3U == 0U ? Rgb{to_dmx(master), 0, 0}
+            color = (segment + static_cast<std::size_t>(std::floor(beat.beat))) % 3U == 0U ? Rgb{to_dmx(master), 0, 0}
                 : (segment % 3U == 1U ? Rgb{0, to_dmx(master), 0} : Rgb{0, 0, to_dmx(master)});
         }
-        set_rgb(frame, start_channel, segment, color);
-    }
-}
-
-void SimpleEngine::set_rgb(DmxFrame& frame, const std::uint16_t start_channel, const std::uint8_t segment, const Rgb color) {
-    const std::uint16_t base = static_cast<std::uint16_t>(start_channel + static_cast<std::uint16_t>(segment) * 3U);
-    if (base + 2U > dmx_channel_count) {
-        return;
-    }
-    frame.at(static_cast<std::size_t>(base - 1U)) = color.r;
-    frame.at(static_cast<std::size_t>(base)) = color.g;
-    frame.at(static_cast<std::size_t>(base + 1U)) = color.b;
-
-    const std::size_t preview_index = start_channel == config_.bar1_start
-        ? segment
-        : static_cast<std::size_t>(config_.segments_per_bar) + segment;
-    if (preview_index < preview_.size()) {
-        preview_.at(preview_index) = color;
+        bar.set_wash(segment, color);
     }
 }
 

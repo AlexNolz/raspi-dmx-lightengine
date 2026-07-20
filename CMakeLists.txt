@@ -28,15 +28,18 @@ target_sources(
     PRIVATE
         src/artnet_sender.cpp
         src/control_command.cpp
+        src/fixture_runtime.cpp
         src/simple_engine.cpp
         src/os2l_event.cpp
         src/os2l_receiver.cpp
         src/project.cpp
         src/web_server.cpp
         include/lightengine/artnet_sender.hpp
+        include/lightengine/color.hpp
         include/lightengine/control_command.hpp
         include/lightengine/dmx.hpp
         include/lightengine/engine_input.hpp
+        include/lightengine/fixture_runtime.hpp
         include/lightengine/simple_engine.hpp
         include/lightengine/os2l_event.hpp
         include/lightengine/os2l_receiver.hpp

@@ -1,6 +1,7 @@
 #include "lightengine/artnet_sender.hpp"
 #include "lightengine/control_command.hpp"
 #include "lightengine/engine_input.hpp"
+#include "lightengine/fixture_runtime.hpp"
 #include "lightengine/os2l_event.hpp"
 #include "lightengine/project.hpp"
 #include "lightengine/simple_engine.hpp"
@@ -90,6 +91,33 @@ int main() {
     {
         if (lightengine::normalize_os2l_button_name("Color Strobe!") != "colorstrobe") {
             std::cerr << "OS2L button name was not normalized\n";
+            return 1;
+        }
+    }
+
+    {
+        lightengine::DmxFrame frame{};
+        lightengine::RgbWash wash{lightengine::DmxAddress{10}, lightengine::DmxAddress{11}, lightengine::DmxAddress{12}};
+        wash.set_color(lightengine::Rgb{1, 2, 3});
+        wash.render_to(frame);
+        if (frame.at(9) != 1 || frame.at(10) != 2 || frame.at(11) != 3) {
+            std::cerr << "RgbWash did not render to the expected DMX channels\n";
+            return 1;
+        }
+    }
+
+    {
+        lightengine::DmxFrame frame{};
+        lightengine::RgbWashBar bar{lightengine::DmxAddress{3}, 8};
+        bar.set_wash(0, lightengine::Rgb{10, 20, 30});
+        bar.set_wash(1, lightengine::Rgb{40, 50, 60});
+        bar.render_to(frame);
+        if (frame.at(2) != 10 || frame.at(3) != 20 || frame.at(4) != 30) {
+            std::cerr << "RgbWashBar did not render first wash to the expected DMX channels\n";
+            return 1;
+        }
+        if (frame.at(5) != 40 || frame.at(6) != 50 || frame.at(7) != 60) {
+            std::cerr << "RgbWashBar did not render second wash to the expected DMX channels\n";
             return 1;
         }
     }

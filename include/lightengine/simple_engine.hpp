@@ -1,8 +1,10 @@
 #pragma once
 
 #include "lightengine/artnet_sender.hpp"
+#include "lightengine/color.hpp"
 #include "lightengine/control_command.hpp"
 #include "lightengine/dmx.hpp"
+#include "lightengine/fixture_runtime.hpp"
 #include "lightengine/os2l_event.hpp"
 
 #include <chrono>
@@ -12,12 +14,6 @@
 #include <vector>
 
 namespace lightengine {
-
-struct Rgb final {
-    std::uint8_t r{};
-    std::uint8_t g{};
-    std::uint8_t b{};
-};
 
 struct BeatSnapshot final {
     double beat{0.0};
@@ -62,8 +58,7 @@ public:
     void mark_artnet_packet_sent();
 
 private:
-    void render_bar(DmxFrame& frame, std::uint16_t start_channel, const BeatSnapshot& beat, double master);
-    void set_rgb(DmxFrame& frame, std::uint16_t start_channel, std::uint8_t segment, Rgb color);
+    void render_bar(RgbWashBar& bar, const BeatSnapshot& beat, double master);
     void apply_preset_locked(const std::string& preset);
 
     mutable std::mutex mutex_;
@@ -92,6 +87,8 @@ private:
     std::uint64_t artnet_packets_{};
     std::chrono::steady_clock::time_point last_os2l_at_{};
     std::vector<Rgb> preview_;
+    RgbWashBar bar1_;
+    RgbWashBar bar2_;
 };
 
 }  // namespace lightengine
