@@ -1,0 +1,23 @@
+#!/sbin/openrc-run
+
+name="Current ArtNet to DMX bridge"
+description="Starts the existing ArtNet to DMX command"
+
+command="/bin/sh"
+command_args="-lc \"$ARTNET_DMX_CMD\""
+command_background="yes"
+pidfile="/run/artnet-dmx-current.pid"
+output_log="/var/log/artnet-dmx-current.log"
+error_log="/var/log/artnet-dmx-current.err"
+
+depend() {
+  need net
+  before light-engine
+}
+
+start_pre() {
+  if [ -z "${ARTNET_DMX_CMD:-}" ]; then
+    eerror "ARTNET_DMX_CMD is not set in /etc/conf.d/artnet-dmx-current"
+    return 1
+  fi
+}

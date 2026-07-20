@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE FixtureDefinition>
+<FixtureDefinition xmlns="http://www.qlcplus.org/FixtureDefinition">
+ <Creator>
+  <Name>Q Light Controller Plus</Name>
+  <Version>5.2.2</Version>
+  <Author>Codex</Author>
+ </Creator>
+ <Manufacturer>Stairville</Manufacturer>
+ <Model>LED Bar 240/8 RGB 1200lm</Model>
+ <Type>Color Changer</Type>
+ <Channel Name="Segment 1 Red" Preset="IntensityRed"/>
+ <Channel Name="Segment 1 Green" Preset="IntensityGreen"/>
+ <Channel Name="Segment 1 Blue" Preset="IntensityBlue"/>
+ <Channel Name="Segment 2 Red" Preset="IntensityRed"/>
+ <Channel Name="Segment 2 Green" Preset="IntensityGreen"/>
+ <Channel Name="Segment 2 Blue" Preset="IntensityBlue"/>
+ <Channel Name="Segment 3 Red" Preset="IntensityRed"/>
+ <Channel Name="Segment 3 Green" Preset="IntensityGreen"/>
+ <Channel Name="Segment 3 Blue" Preset="IntensityBlue"/>
+ <Channel Name="Segment 4 Red" Preset="IntensityRed"/>
+ <Channel Name="Segment 4 Green" Preset="IntensityGreen"/>
+ <Channel Name="Segment 4 Blue" Preset="IntensityBlue"/>
+ <Channel Name="Segment 5 Red" Preset="IntensityRed"/>
+ <Channel Name="Segment 5 Green" Preset="IntensityGreen"/>
+ <Channel Name="Segment 5 Blue" Preset="IntensityBlue"/>
+ <Channel Name="Segment 6 Red" Preset="IntensityRed"/>
+ <Channel Name="Segment 6 Green" Preset="IntensityGreen"/>
+ <Channel Name="Segment 6 Blue" Preset="IntensityBlue"/>
+ <Channel Name="Segment 7 Red" Preset="IntensityRed"/>
+ <Channel Name="Segment 7 Green" Preset="IntensityGreen"/>
+ <Channel Name="Segment 7 Blue" Preset="IntensityBlue"/>
+ <Channel Name="Segment 8 Red" Preset="IntensityRed"/>
+ <Channel Name="Segment 8 Green" Preset="IntensityGreen"/>
+ <Channel Name="Segment 8 Blue" Preset="IntensityBlue"/>
+ <Mode Name="24-channel">
+  <Channel Number="0">Segment 1 Red</Channel>
+  <Channel Number="1">Segment 1 Green</Channel>
+  <Channel Number="2">Segment 1 Blue</Channel>
+  <Channel Number="3">Segment 2 Red</Channel>
+  <Channel Number="4">Segment 2 Green</Channel>
+  <Channel Number="5">Segment 2 Blue</Channel>
+  <Channel Number="6">Segment 3 Red</Channel>
+  <Channel Number="7">Segment 3 Green</Channel>
+  <Channel Number="8">Segment 3 Blue</Channel>
+  <Channel Number="9">Segment 4 Red</Channel>
+  <Channel Number="10">Segment 4 Green</Channel>
+  <Channel Number="11">Segment 4 Blue</Channel>
+  <Channel Number="12">Segment 5 Red</Channel>
+  <Channel Number="13">Segment 5 Green</Channel>
+  <Channel Number="14">Segment 5 Blue</Channel>
+  <Channel Number="15">Segment 6 Red</Channel>
+  <Channel Number="16">Segment 6 Green</Channel>
+  <Channel Number="17">Segment 6 Blue</Channel>
+  <Channel Number="18">Segment 7 Red</Channel>
+  <Channel Number="19">Segment 7 Green</Channel>
+  <Channel Number="20">Segment 7 Blue</Channel>
+  <Channel Number="21">Segment 8 Red</Channel>
+  <Channel Number="22">Segment 8 Green</Channel>
+  <Channel Number="23">Segment 8 Blue</Channel>
+ </Mode>
+ <Physical>
+  <Bulb Type="LED" Lumens="1200" ColourTemperature="0"/>
+  <Dimensions Weight="2.6" Width="1064" Height="88" Depth="65"/>
+  <Lens Name="Other" DegreesMin="60" DegreesMax="60"/>
+  <Focus Type="Fixed" PanMax="0" TiltMax="0"/>
+  <Technical PowerConsumption="36" DmxConnector="3-pin"/>
+ </Physical>
+</FixtureDefinition>

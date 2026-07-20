@@ -1,0 +1,151 @@
+{
+  "artnet_host": "192.168.137.255",
+  "artnet_port": 6454,
+  "artnet_universe": 0,
+  "enabled_effects": [
+    "pulse",
+    "ball",
+    "pair_swap",
+    "rainbow",
+    "scanner",
+    "sparkle",
+    "split",
+    "blocks",
+    "comet",
+    "theater",
+    "zipper",
+    "orbit",
+    "gate",
+    "binary",
+    "fill"
+  ],
+  "enabled_motion_scenes": [
+    "center_pulse",
+    "point_chase",
+    "line_sweep",
+    "depth_sweep",
+    "cross_pairs",
+    "split_strobe",
+    "corner_swap",
+    "gobo_chase",
+    "side_pingpong",
+    "x_cross",
+    "color_fan",
+    "pair_orbit",
+    "pair_random"
+  ],
+  "fixtures": {
+    "fog": {
+      "armed": false,
+      "channels": 1,
+      "enabled": true,
+      "name": "Stairville AF-40 DMX Fog",
+      "start": 95
+    },
+    "led_bars": [
+      {
+        "enabled": true,
+        "name": "LED Bar 1",
+        "segments": 8,
+        "start": 3
+      },
+      {
+        "enabled": true,
+        "name": "LED Bar 2",
+        "segments": 8,
+        "start": 27
+      }
+    ],
+    "moving_heads": [
+      {
+        "channels": 11,
+        "enabled": true,
+        "invert_pan": false,
+        "invert_tilt": false,
+        "name": "MH 1",
+        "pan_center": 0.333,
+        "pan_max": 0.54,
+        "pan_min": 0.14,
+        "pan_width": 0.3,
+        "profile": "zkymzl11",
+        "start": 51,
+        "tilt_max": 0.82,
+        "tilt_min": 0.56
+      },
+      {
+        "channels": 11,
+        "enabled": true,
+        "invert_pan": false,
+        "invert_tilt": false,
+        "name": "MH 2",
+        "pan_center": 0.333,
+        "pan_max": 0.54,
+        "pan_min": 0.14,
+        "pan_width": 0.3,
+        "profile": "zkymzl11",
+        "start": 62,
+        "tilt_max": 0.82,
+        "tilt_min": 0.56
+      },
+      {
+        "channels": 11,
+        "enabled": true,
+        "invert_pan": false,
+        "invert_tilt": false,
+        "name": "MH 3",
+        "pan_center": 0.333,
+        "pan_max": 0.54,
+        "pan_min": 0.14,
+        "pan_width": 0.3,
+        "profile": "zkymzl11",
+        "start": 73,
+        "tilt_max": 0.82,
+        "tilt_min": 0.56
+      },
+      {
+        "channels": 11,
+        "enabled": true,
+        "invert_pan": false,
+        "invert_tilt": false,
+        "name": "MH 4",
+        "pan_center": 0.333,
+        "pan_max": 0.54,
+        "pan_min": 0.14,
+        "pan_width": 0.3,
+        "profile": "zkymzl11",
+        "start": 84,
+        "tilt_max": 0.82,
+        "tilt_min": 0.56
+      }
+    ],
+    "strobe": {
+      "armed": false,
+      "beat_pulse": false,
+      "channels": 2,
+      "enabled": true,
+      "master": 1.0,
+      "name": "Stairville 1500W Strobe",
+      "speed": 1.0,
+      "start": 1
+    }
+  },
+  "fps": 40,
+  "layers": {
+    "fog": false,
+    "led_bars": true,
+    "motion": true,
+    "strobe": false
+  },
+  "led_master": 1.0,
+  "led_start_channel": 3,
+  "master": 1.0,
+  "mood": 58,
+  "motion_master": 1.0,
+  "motion_mode": "auto",
+  "os2l_host": "127.0.0.1",
+  "os2l_port": 9996,
+  "preset": "club",
+  "segment_count": 16,
+  "web_host": "127.0.0.1",
+  "web_port": 8088
+}

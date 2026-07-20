@@ -1,0 +1,17 @@
+# Python runtime
+__pycache__/
+*.py[cod]
+*.log
+
+# Local runtime configuration
+light_engine_config.json
+
+# Deployment credentials
+raspi_dmx_deploy_key
+raspi_dmx_deploy_key.pub
+
+# Downloaded Alpine package cache
+raspi_apks/
+
+# Local agent metadata
+.agents/

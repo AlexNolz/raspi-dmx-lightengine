@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mini Light Engine</title>
+    <link rel="stylesheet" href="/app.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>Mini Light Engine</h1>
+          <div class="meta">
+            <span id="os2lStatus" class="status bad">OS2L wartet</span>
+            <span id="bpmStatus">120 BPM</span>
+            <span id="effectStatus">Beat Pulse</span>
+          </div>
+        </div>
+        <div class="target" id="targetStatus">ArtNet</div>
+      </header>
+
+      <section class="preview-panel">
+        <div id="preview" class="segments" aria-label="LED Bar Vorschau"></div>
+      </section>
+
+      <section class="control-grid">
+        <div class="panel transport">
+          <button id="runButton" class="command primary">Start</button>
+          <button data-trigger="next" class="command">Next Look</button>
+          <button data-hold-trigger="whiteout" class="command white">White Out</button>
+          <button data-hold-trigger="color_strobe" class="command hot">Color Strobe</button>
+          <button data-hold-trigger="strobe_out" class="command strobe-out">Strobe Out</button>
+          <button data-trigger="fog" class="command fog">Fog Burst</button>
+          <button id="blackoutButton" data-hold-trigger="blackout" class="command dark">Blackout</button>
+        </div>
+
+        <div class="panel sliders">
+          <label>
+            <span>Mood</span>
+            <input id="mood" type="range" min="0" max="100" step="1">
+            <output id="moodValue">58</output>
+          </label>
+          <label>
+            <span>Master</span>
+            <input id="master" type="range" min="0" max="100" step="1">
+            <output id="masterValue">100</output>
+          </label>
+        </div>
+
+        <div class="panel output-control">
+          <h2>LED Bars</h2>
+          <label class="switch-row"><input id="ledEnabled" type="checkbox"><span>LED Bars eingeschaltet</span></label>
+          <label>
+            <span>Helligkeit</span>
+            <input id="ledMaster" type="range" min="0" max="100" step="1">
+            <output id="ledMasterValue">100</output>
+          </label>
+        </div>
+
+        <div class="panel output-control">
+          <h2>Moving Heads</h2>
+          <label class="switch-row"><input id="motionEnabled" type="checkbox"><span>Moving Heads eingeschaltet</span></label>
+          <label>
+            <span>Helligkeit</span>
+            <input id="motionMaster" type="range" min="0" max="100" step="1">
+            <output id="motionMasterValue">100</output>
+          </label>
+        </div>
+
+        <div class="panel presets">
+          <button data-preset="lounge">Lounge</button>
+          <button data-preset="club">Club</button>
+          <button data-preset="rave">Rave</button>
+          <button data-preset="game_show">Game Show</button>
+          <button data-preset="rgb_hard">Pure RGB</button>
+          <button data-preset="custom">Custom</button>
+        </div>
+
+        <div class="panel motion" id="motionModes"></div>
+
+        <div class="panel motion-scenes" id="motionScenes"></div>
+
+        <div class="panel effects" id="effects"></div>
+
+        <div class="panel layers">
+          <label class="switch-row"><input data-layer="fog" type="checkbox"><span>Nebel Layer</span></label>
+          <label class="switch-row arm"><input data-arm="fog" type="checkbox"><span>Nebel Arm</span></label>
+        </div>
+
+        <div class="panel strobe-control">
+          <h2>1500W Stroboskop</h2>
+          <label class="switch-row arm"><input id="strobeArmed" type="checkbox"><span>Stroboskop Arm</span></label>
+          <label class="switch-row"><input id="strobeBeatPulse" type="checkbox"><span>Beat Pulse</span></label>
+          <label>
+            <span>Helligkeit</span>
+            <input id="strobeMaster" type="range" min="0" max="100" step="1">
+            <output id="strobeMasterValue">100</output>
+          </label>
+          <label>
+            <span>Geschwindigkeit</span>
+            <input id="strobeSpeed" type="range" min="0" max="100" step="1">
+            <output id="strobeSpeedValue">100</output>
+          </label>
+        </div>
+
+        <div class="panel rig" id="rig"></div>
+
+        <div class="panel artnet">
+          <label>
+            <span>ArtNet Ziel</span>
+            <input id="artnetHost" type="text" spellcheck="false">
+          </label>
+          <label>
+            <span>Universe</span>
+            <input id="universe" type="number" min="0" max="32767">
+          </label>
+          <label>
+            <span>DMX Start</span>
+            <input id="startChannel" type="number" min="1" max="512">
+          </label>
+          <label>
+            <span>Segmente</span>
+            <input id="segmentsInput" type="number" min="1" max="64">
+          </label>
+          <button id="applyArtnet" class="command">Apply</button>
+        </div>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

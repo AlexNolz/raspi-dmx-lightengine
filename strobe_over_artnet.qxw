@@ -1,0 +1,644 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE Workspace>
+<Workspace xmlns="http://www.qlcplus.org/Workspace" CurrentWindow="VirtualConsole">
+ <Creator>
+  <Name>Q Light Controller Plus</Name>
+  <Version>4.14.4</Version>
+  <Author>alexn</Author>
+ </Creator>
+ <Engine>
+  <InputOutputMap>
+   <BeatGenerator BeatType="Plugin" BPM="168"/>
+   <NetworkServer Type="Native" AutoStart="False" Name="" Password=""/>
+   <Universe Name="Universe 1" ID="0">
+    <Input Plugin="OS2L" UID="OS2L line" Line="0" Profile="VDJ 2018">
+     <PluginParameters MIDISendNoteOff="true" hostAddress="127.0.0.1" hostPort="9996"/>
+    </Input>
+    <Output Plugin="ArtNet" UID="192.168.137.1" Line="6"/>
+   </Universe>
+   <Universe Name="Universe 2" ID="1"/>
+   <Universe Name="Universe 3" ID="2"/>
+   <Universe Name="Universe 4" ID="3"/>
+  </InputOutputMap>
+  <Fixture>
+   <Manufacturer>Stairville</Manufacturer>
+   <Model>PS 1500 DMX</Model>
+   <Mode>Normal</Mode>
+   <ID>0</ID>
+   <Name>PS 1500 DMX</Name>
+   <Universe>0</Universe>
+   <Address>0</Address>
+   <Channels>2</Channels>
+  </Fixture>
+  <Fixture>
+   <Manufacturer>Stairville</Manufacturer>
+   <Model>LED Bar 240/8 RGB</Model>
+   <Mode>24-channel</Mode>
+   <ID>1</ID>
+   <Name>LED Bar 240/8 RGB</Name>
+   <Universe>0</Universe>
+   <Address>2</Address>
+   <Channels>24</Channels>
+  </Fixture>
+  <Function ID="0" Type="Scene" Name="BAR Blackout" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,0,3,0,4,0,5,0,6,0,7,0,8,0,9,0,10,0,11,0,12,0,13,0,14,0,15,0,16,0,17,0,18,0,19,0,20,0,21,0,22,0,23,0</FixtureVal>
+  </Function>
+  <Function ID="1" Type="Scene" Name="BAR Full White" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,255,1,255,2,255,3,255,4,255,5,255,6,255,7,255,8,255,9,255,10,255,11,255,12,255,13,255,14,255,15,255,16,255,17,255,18,255,19,255,20,255,21,255,22,255,23,255</FixtureVal>
+  </Function>
+  <Function ID="2" Type="Scene" Name="BAR Full Red" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,255,1,0,2,0,3,255,4,0,5,0,6,255,7,0,8,0,9,255,10,0,11,0,12,255,13,0,14,0,15,255,16,0,17,0,18,255,19,0,20,0,21,255,22,0,23,0</FixtureVal>
+  </Function>
+  <Function ID="3" Type="Scene" Name="BAR Full Green" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,255,2,0,3,0,4,255,5,0,6,0,7,255,8,0,9,0,10,255,11,0,12,0,13,255,14,0,15,0,16,255,17,0,18,0,19,255,20,0,21,0,22,255,23,0</FixtureVal>
+  </Function>
+  <Function ID="4" Type="Scene" Name="BAR Full Blue" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,255,3,0,4,0,5,255,6,0,7,0,8,255,9,0,10,0,11,255,12,0,13,0,14,255,15,0,16,0,17,255,18,0,19,0,20,255,21,0,22,0,23,255</FixtureVal>
+  </Function>
+  <Function ID="5" Type="Scene" Name="BAR Full Cyan" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,180,2,255,3,0,4,180,5,255,6,0,7,180,8,255,9,0,10,180,11,255,12,0,13,180,14,255,15,0,16,180,17,255,18,0,19,180,20,255,21,0,22,180,23,255</FixtureVal>
+  </Function>
+  <Function ID="6" Type="Scene" Name="BAR Full Magenta" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,255,1,0,2,180,3,255,4,0,5,180,6,255,7,0,8,180,9,255,10,0,11,180,12,255,13,0,14,180,15,255,16,0,17,180,18,255,19,0,20,180,21,255,22,0,23,180</FixtureVal>
+  </Function>
+  <Function ID="7" Type="Scene" Name="BAR Full Amber" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,255,1,120,2,0,3,255,4,120,5,0,6,255,7,120,8,0,9,255,10,120,11,0,12,255,13,120,14,0,15,255,16,120,17,0,18,255,19,120,20,0,21,255,22,120,23,0</FixtureVal>
+  </Function>
+  <Function ID="8" Type="Scene" Name="PAIR Red Cyan A" Path="/Scenes">
+   <Speed FadeIn="120" FadeOut="120" Duration="0"/>
+   <FixtureVal ID="1">0,255,1,0,2,0,3,255,4,0,5,0,6,0,7,180,8,255,9,0,10,180,11,255,12,255,13,0,14,0,15,255,16,0,17,0,18,0,19,180,20,255,21,0,22,180,23,255</FixtureVal>
+  </Function>
+  <Function ID="9" Type="Scene" Name="PAIR Cyan Red B" Path="/Scenes">
+   <Speed FadeIn="120" FadeOut="120" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,180,2,255,3,0,4,180,5,255,6,255,7,0,8,0,9,255,10,0,11,0,12,0,13,180,14,255,15,0,16,180,17,255,18,255,19,0,20,0,21,255,22,0,23,0</FixtureVal>
+  </Function>
+  <Function ID="10" Type="Scene" Name="PAIR Magenta Amber A" Path="/Scenes">
+   <Speed FadeIn="120" FadeOut="120" Duration="0"/>
+   <FixtureVal ID="1">0,255,1,0,2,180,3,255,4,0,5,180,6,255,7,120,8,0,9,255,10,120,11,0,12,255,13,0,14,180,15,255,16,0,17,180,18,255,19,120,20,0,21,255,22,120,23,0</FixtureVal>
+  </Function>
+  <Function ID="11" Type="Scene" Name="PAIR Amber Magenta B" Path="/Scenes">
+   <Speed FadeIn="120" FadeOut="120" Duration="0"/>
+   <FixtureVal ID="1">0,255,1,120,2,0,3,255,4,120,5,0,6,255,7,0,8,180,9,255,10,0,11,180,12,255,13,120,14,0,15,255,16,120,17,0,18,255,19,0,20,180,21,255,22,0,23,180</FixtureVal>
+  </Function>
+  <Function ID="12" Type="Scene" Name="BALL Blue Amber 1" Path="/Scenes">
+   <Speed FadeIn="60" FadeOut="60" Duration="0"/>
+   <FixtureVal ID="1">0,255,1,120,2,0,3,0,4,0,5,85,6,0,7,0,8,85,9,0,10,0,11,85,12,0,13,0,14,85,15,0,16,0,17,85,18,0,19,0,20,85,21,0,22,0,23,85</FixtureVal>
+  </Function>
+  <Function ID="13" Type="Scene" Name="BALL Blue Amber 2" Path="/Scenes">
+   <Speed FadeIn="60" FadeOut="60" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,85,3,255,4,120,5,0,6,0,7,0,8,85,9,0,10,0,11,85,12,0,13,0,14,85,15,0,16,0,17,85,18,0,19,0,20,85,21,0,22,0,23,85</FixtureVal>
+  </Function>
+  <Function ID="14" Type="Scene" Name="BALL Blue Amber 3" Path="/Scenes">
+   <Speed FadeIn="60" FadeOut="60" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,85,3,0,4,0,5,85,6,255,7,120,8,0,9,0,10,0,11,85,12,0,13,0,14,85,15,0,16,0,17,85,18,0,19,0,20,85,21,0,22,0,23,85</FixtureVal>
+  </Function>
+  <Function ID="15" Type="Scene" Name="BALL Blue Amber 4" Path="/Scenes">
+   <Speed FadeIn="60" FadeOut="60" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,85,3,0,4,0,5,85,6,0,7,0,8,85,9,255,10,120,11,0,12,0,13,0,14,85,15,0,16,0,17,85,18,0,19,0,20,85,21,0,22,0,23,85</FixtureVal>
+  </Function>
+  <Function ID="16" Type="Scene" Name="BALL Blue Amber 5" Path="/Scenes">
+   <Speed FadeIn="60" FadeOut="60" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,85,3,0,4,0,5,85,6,0,7,0,8,85,9,0,10,0,11,85,12,255,13,120,14,0,15,0,16,0,17,85,18,0,19,0,20,85,21,0,22,0,23,85</FixtureVal>
+  </Function>
+  <Function ID="17" Type="Scene" Name="BALL Blue Amber 6" Path="/Scenes">
+   <Speed FadeIn="60" FadeOut="60" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,85,3,0,4,0,5,85,6,0,7,0,8,85,9,0,10,0,11,85,12,0,13,0,14,85,15,255,16,120,17,0,18,0,19,0,20,85,21,0,22,0,23,85</FixtureVal>
+  </Function>
+  <Function ID="18" Type="Scene" Name="BALL Blue Amber 7" Path="/Scenes">
+   <Speed FadeIn="60" FadeOut="60" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,85,3,0,4,0,5,85,6,0,7,0,8,85,9,0,10,0,11,85,12,0,13,0,14,85,15,0,16,0,17,85,18,255,19,120,20,0,21,0,22,0,23,85</FixtureVal>
+  </Function>
+  <Function ID="19" Type="Scene" Name="BALL Blue Amber 8" Path="/Scenes">
+   <Speed FadeIn="60" FadeOut="60" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,85,3,0,4,0,5,85,6,0,7,0,8,85,9,0,10,0,11,85,12,0,13,0,14,85,15,0,16,0,17,85,18,0,19,0,20,85,21,255,22,120,23,0</FixtureVal>
+  </Function>
+  <Function ID="20" Type="Scene" Name="LOUNGE Drift A" Path="/Scenes">
+   <Speed FadeIn="600" FadeOut="600" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,55,2,70,3,0,4,55,5,70,6,0,7,0,8,85,9,0,10,0,11,85,12,90,13,45,14,15,15,90,16,45,17,15,18,80,19,0,20,130,21,80,22,0,23,130</FixtureVal>
+  </Function>
+  <Function ID="21" Type="Scene" Name="LOUNGE Drift B" Path="/Scenes">
+   <Speed FadeIn="600" FadeOut="600" Duration="0"/>
+   <FixtureVal ID="1">0,80,1,0,2,130,3,80,4,0,5,130,6,0,7,55,8,70,9,0,10,55,11,70,12,0,13,0,14,85,15,0,16,0,17,85,18,90,19,45,20,15,21,90,22,45,23,15</FixtureVal>
+  </Function>
+  <Function ID="22" Type="Scene" Name="LOUNGE Drift C" Path="/Scenes">
+   <Speed FadeIn="600" FadeOut="600" Duration="0"/>
+   <FixtureVal ID="1">0,90,1,45,2,15,3,90,4,45,5,15,6,80,7,0,8,130,9,80,10,0,11,130,12,0,13,55,14,70,15,0,16,55,17,70,18,0,19,0,20,85,21,0,22,0,23,85</FixtureVal>
+  </Function>
+  <Function ID="23" Type="Scene" Name="RAINBOW A" Path="/Scenes">
+   <Speed FadeIn="80" FadeOut="80" Duration="0"/>
+   <FixtureVal ID="1">0,255,1,0,2,0,3,255,4,120,5,0,6,160,7,255,8,0,9,0,10,255,11,0,12,0,13,180,14,255,15,0,16,0,17,255,18,140,19,0,20,255,21,255,22,0,23,180</FixtureVal>
+  </Function>
+  <Function ID="24" Type="Scene" Name="RAINBOW B" Path="/Scenes">
+   <Speed FadeIn="80" FadeOut="80" Duration="0"/>
+   <FixtureVal ID="1">0,255,1,0,2,180,3,255,4,0,5,0,6,255,7,120,8,0,9,160,10,255,11,0,12,0,13,255,14,0,15,0,16,180,17,255,18,0,19,0,20,255,21,140,22,0,23,255</FixtureVal>
+  </Function>
+  <Function ID="25" Type="Scene" Name="RAINBOW C" Path="/Scenes">
+   <Speed FadeIn="80" FadeOut="80" Duration="0"/>
+   <FixtureVal ID="1">0,140,1,0,2,255,3,255,4,0,5,180,6,255,7,0,8,0,9,255,10,120,11,0,12,160,13,255,14,0,15,0,16,255,17,0,18,0,19,180,20,255,21,0,22,0,23,255</FixtureVal>
+  </Function>
+  <Function ID="26" Type="Scene" Name="SPLIT Red Blue" Path="/Scenes">
+   <Speed FadeIn="80" FadeOut="80" Duration="0"/>
+   <FixtureVal ID="1">0,255,1,0,2,0,3,255,4,0,5,0,6,255,7,0,8,0,9,255,10,0,11,0,12,0,13,0,14,255,15,0,16,0,17,255,18,0,19,0,20,255,21,0,22,0,23,255</FixtureVal>
+  </Function>
+  <Function ID="27" Type="Scene" Name="SPLIT Blue Red" Path="/Scenes">
+   <Speed FadeIn="80" FadeOut="80" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,255,3,0,4,0,5,255,6,0,7,0,8,255,9,0,10,0,11,255,12,255,13,0,14,0,15,255,16,0,17,0,18,255,19,0,20,0,21,255,22,0,23,0</FixtureVal>
+  </Function>
+  <Function ID="28" Type="Scene" Name="SPLIT Cyan Magenta" Path="/Scenes">
+   <Speed FadeIn="80" FadeOut="80" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,180,2,255,3,0,4,180,5,255,6,0,7,180,8,255,9,0,10,180,11,255,12,255,13,0,14,180,15,255,16,0,17,180,18,255,19,0,20,180,21,255,22,0,23,180</FixtureVal>
+  </Function>
+  <Function ID="29" Type="Scene" Name="SPLIT Magenta Cyan" Path="/Scenes">
+   <Speed FadeIn="80" FadeOut="80" Duration="0"/>
+   <FixtureVal ID="1">0,255,1,0,2,180,3,255,4,0,5,180,6,255,7,0,8,180,9,255,10,0,11,180,12,0,13,180,14,255,15,0,16,180,17,255,18,0,19,180,20,255,21,0,22,180,23,255</FixtureVal>
+  </Function>
+  <Function ID="30" Type="Scene" Name="SCANNER White 1" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,255,1,255,2,255,3,0,4,0,5,0,6,0,7,0,8,0,9,0,10,0,11,0,12,0,13,0,14,0,15,0,16,0,17,0,18,0,19,0,20,0,21,0,22,0,23,0</FixtureVal>
+  </Function>
+  <Function ID="31" Type="Scene" Name="SCANNER White 2" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,0,3,255,4,255,5,255,6,0,7,0,8,0,9,0,10,0,11,0,12,0,13,0,14,0,15,0,16,0,17,0,18,0,19,0,20,0,21,0,22,0,23,0</FixtureVal>
+  </Function>
+  <Function ID="32" Type="Scene" Name="SCANNER White 3" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,0,3,0,4,0,5,0,6,255,7,255,8,255,9,0,10,0,11,0,12,0,13,0,14,0,15,0,16,0,17,0,18,0,19,0,20,0,21,0,22,0,23,0</FixtureVal>
+  </Function>
+  <Function ID="33" Type="Scene" Name="SCANNER White 4" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,0,3,0,4,0,5,0,6,0,7,0,8,0,9,255,10,255,11,255,12,0,13,0,14,0,15,0,16,0,17,0,18,0,19,0,20,0,21,0,22,0,23,0</FixtureVal>
+  </Function>
+  <Function ID="34" Type="Scene" Name="SCANNER White 5" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,0,3,0,4,0,5,0,6,0,7,0,8,0,9,0,10,0,11,0,12,255,13,255,14,255,15,0,16,0,17,0,18,0,19,0,20,0,21,0,22,0,23,0</FixtureVal>
+  </Function>
+  <Function ID="35" Type="Scene" Name="SCANNER White 6" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,0,3,0,4,0,5,0,6,0,7,0,8,0,9,0,10,0,11,0,12,0,13,0,14,0,15,255,16,255,17,255,18,0,19,0,20,0,21,0,22,0,23,0</FixtureVal>
+  </Function>
+  <Function ID="36" Type="Scene" Name="SCANNER White 7" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,0,3,0,4,0,5,0,6,0,7,0,8,0,9,0,10,0,11,0,12,0,13,0,14,0,15,0,16,0,17,0,18,255,19,255,20,255,21,0,22,0,23,0</FixtureVal>
+  </Function>
+  <Function ID="37" Type="Scene" Name="SCANNER White 8" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,0,3,0,4,0,5,0,6,0,7,0,8,0,9,0,10,0,11,0,12,0,13,0,14,0,15,0,16,0,17,0,18,0,19,0,20,0,21,255,22,255,23,255</FixtureVal>
+  </Function>
+  <Function ID="38" Type="Scene" Name="SPARK Blue White 1" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,255,1,255,2,255,3,0,4,180,5,255,6,0,7,0,8,255,9,0,10,0,11,255,12,0,13,0,14,255,15,0,16,0,17,255,18,0,19,0,20,255,21,0,22,0,23,255</FixtureVal>
+  </Function>
+  <Function ID="39" Type="Scene" Name="SPARK Blue White 2" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,180,2,255,3,255,4,255,5,255,6,0,7,180,8,255,9,0,10,0,11,255,12,0,13,0,14,255,15,0,16,0,17,255,18,0,19,0,20,255,21,0,22,0,23,255</FixtureVal>
+  </Function>
+  <Function ID="40" Type="Scene" Name="SPARK Blue White 3" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,255,3,0,4,180,5,255,6,255,7,255,8,255,9,0,10,180,11,255,12,0,13,0,14,255,15,0,16,0,17,255,18,0,19,0,20,255,21,0,22,0,23,255</FixtureVal>
+  </Function>
+  <Function ID="41" Type="Scene" Name="SPARK Blue White 4" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,255,3,0,4,0,5,255,6,0,7,180,8,255,9,255,10,255,11,255,12,0,13,180,14,255,15,0,16,0,17,255,18,0,19,0,20,255,21,0,22,0,23,255</FixtureVal>
+  </Function>
+  <Function ID="42" Type="Scene" Name="SPARK Blue White 5" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,255,3,0,4,0,5,255,6,0,7,0,8,255,9,0,10,180,11,255,12,255,13,255,14,255,15,0,16,180,17,255,18,0,19,0,20,255,21,0,22,0,23,255</FixtureVal>
+  </Function>
+  <Function ID="43" Type="Scene" Name="SPARK Blue White 6" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,255,3,0,4,0,5,255,6,0,7,0,8,255,9,0,10,0,11,255,12,0,13,180,14,255,15,255,16,255,17,255,18,0,19,180,20,255,21,0,22,0,23,255</FixtureVal>
+  </Function>
+  <Function ID="44" Type="Scene" Name="SPARK Blue White 7" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,255,3,0,4,0,5,255,6,0,7,0,8,255,9,0,10,0,11,255,12,0,13,0,14,255,15,0,16,180,17,255,18,255,19,255,20,255,21,0,22,180,23,255</FixtureVal>
+  </Function>
+  <Function ID="45" Type="Scene" Name="SPARK Blue White 8" Path="/Scenes">
+   <Speed FadeIn="0" FadeOut="0" Duration="0"/>
+   <FixtureVal ID="1">0,0,1,0,2,255,3,0,4,0,5,255,6,0,7,0,8,255,9,0,10,0,11,255,12,0,13,0,14,255,15,0,16,0,17,255,18,0,19,180,20,255,21,255,22,255,23,255</FixtureVal>
+  </Function>
+  <Function ID="46" Type="Chaser" Name="FX 01 WHITE OUT STROBE" Path="/Effects">
+   <Tempo>Beats</Tempo>
+   <Speed FadeIn="0" FadeOut="0" Duration="1"/>
+   <Direction>Forward</Direction>
+   <RunOrder>Loop</RunOrder>
+   <SpeedModes FadeIn="Default" FadeOut="Default" Duration="Common"/>
+   <Step Number="0" FadeIn="0" Hold="1" FadeOut="0">1</Step>
+   <Step Number="1" FadeIn="0" Hold="1" FadeOut="0">0</Step>
+  </Function>
+  <Function ID="47" Type="Chaser" Name="FX 02 STROBE OUT COLOR BEAT" Path="/Effects">
+   <Tempo>Beats</Tempo>
+   <Speed FadeIn="0" FadeOut="0" Duration="1"/>
+   <Direction>Forward</Direction>
+   <RunOrder>Loop</RunOrder>
+   <SpeedModes FadeIn="Default" FadeOut="Default" Duration="Common"/>
+   <Step Number="0" FadeIn="0" Hold="1" FadeOut="0">2</Step>
+   <Step Number="1" FadeIn="0" Hold="1" FadeOut="0">0</Step>
+   <Step Number="2" FadeIn="0" Hold="1" FadeOut="0">5</Step>
+   <Step Number="3" FadeIn="0" Hold="1" FadeOut="0">0</Step>
+   <Step Number="4" FadeIn="0" Hold="1" FadeOut="0">6</Step>
+   <Step Number="5" FadeIn="0" Hold="1" FadeOut="0">0</Step>
+   <Step Number="6" FadeIn="0" Hold="1" FadeOut="0">7</Step>
+   <Step Number="7" FadeIn="0" Hold="1" FadeOut="0">0</Step>
+  </Function>
+  <Function ID="48" Type="Chaser" Name="FX 03 PAIR SWAP SMOOTH" Path="/Effects">
+   <Tempo>Beats</Tempo>
+   <Speed FadeIn="120" FadeOut="120" Duration="2"/>
+   <Direction>Forward</Direction>
+   <RunOrder>Loop</RunOrder>
+   <SpeedModes FadeIn="Default" FadeOut="Default" Duration="Common"/>
+   <Step Number="0" FadeIn="120" Hold="2" FadeOut="120">8</Step>
+   <Step Number="1" FadeIn="120" Hold="2" FadeOut="120">9</Step>
+   <Step Number="2" FadeIn="120" Hold="2" FadeOut="120">10</Step>
+   <Step Number="3" FadeIn="120" Hold="2" FadeOut="120">11</Step>
+  </Function>
+  <Function ID="49" Type="Chaser" Name="FX 04 GAME SHOW BALL" Path="/Effects">
+   <Tempo>Beats</Tempo>
+   <Speed FadeIn="60" FadeOut="60" Duration="1"/>
+   <Direction>Forward</Direction>
+   <RunOrder>Loop</RunOrder>
+   <SpeedModes FadeIn="Default" FadeOut="Default" Duration="Common"/>
+   <Step Number="0" FadeIn="60" Hold="1" FadeOut="60">12</Step>
+   <Step Number="1" FadeIn="60" Hold="1" FadeOut="60">13</Step>
+   <Step Number="2" FadeIn="60" Hold="1" FadeOut="60">14</Step>
+   <Step Number="3" FadeIn="60" Hold="1" FadeOut="60">15</Step>
+   <Step Number="4" FadeIn="60" Hold="1" FadeOut="60">16</Step>
+   <Step Number="5" FadeIn="60" Hold="1" FadeOut="60">17</Step>
+   <Step Number="6" FadeIn="60" Hold="1" FadeOut="60">18</Step>
+   <Step Number="7" FadeIn="60" Hold="1" FadeOut="60">19</Step>
+   <Step Number="8" FadeIn="60" Hold="1" FadeOut="60">18</Step>
+   <Step Number="9" FadeIn="60" Hold="1" FadeOut="60">17</Step>
+   <Step Number="10" FadeIn="60" Hold="1" FadeOut="60">16</Step>
+   <Step Number="11" FadeIn="60" Hold="1" FadeOut="60">15</Step>
+   <Step Number="12" FadeIn="60" Hold="1" FadeOut="60">14</Step>
+   <Step Number="13" FadeIn="60" Hold="1" FadeOut="60">13</Step>
+  </Function>
+  <Function ID="50" Type="Chaser" Name="FX 05 RAINBOW CHASE" Path="/Effects">
+   <Tempo>Beats</Tempo>
+   <Speed FadeIn="80" FadeOut="80" Duration="1"/>
+   <Direction>Forward</Direction>
+   <RunOrder>Loop</RunOrder>
+   <SpeedModes FadeIn="Default" FadeOut="Default" Duration="Common"/>
+   <Step Number="0" FadeIn="80" Hold="1" FadeOut="80">23</Step>
+   <Step Number="1" FadeIn="80" Hold="1" FadeOut="80">24</Step>
+   <Step Number="2" FadeIn="80" Hold="1" FadeOut="80">25</Step>
+  </Function>
+  <Function ID="51" Type="Chaser" Name="FX 06 SCANNER BOUNCE" Path="/Effects">
+   <Tempo>Beats</Tempo>
+   <Speed FadeIn="0" FadeOut="0" Duration="1"/>
+   <Direction>Forward</Direction>
+   <RunOrder>Loop</RunOrder>
+   <SpeedModes FadeIn="Default" FadeOut="Default" Duration="Common"/>
+   <Step Number="0" FadeIn="0" Hold="1" FadeOut="0">30</Step>
+   <Step Number="1" FadeIn="0" Hold="1" FadeOut="0">31</Step>
+   <Step Number="2" FadeIn="0" Hold="1" FadeOut="0">32</Step>
+   <Step Number="3" FadeIn="0" Hold="1" FadeOut="0">33</Step>
+   <Step Number="4" FadeIn="0" Hold="1" FadeOut="0">34</Step>
+   <Step Number="5" FadeIn="0" Hold="1" FadeOut="0">35</Step>
+   <Step Number="6" FadeIn="0" Hold="1" FadeOut="0">36</Step>
+   <Step Number="7" FadeIn="0" Hold="1" FadeOut="0">37</Step>
+   <Step Number="8" FadeIn="0" Hold="1" FadeOut="0">36</Step>
+   <Step Number="9" FadeIn="0" Hold="1" FadeOut="0">35</Step>
+   <Step Number="10" FadeIn="0" Hold="1" FadeOut="0">34</Step>
+   <Step Number="11" FadeIn="0" Hold="1" FadeOut="0">33</Step>
+   <Step Number="12" FadeIn="0" Hold="1" FadeOut="0">32</Step>
+   <Step Number="13" FadeIn="0" Hold="1" FadeOut="0">31</Step>
+  </Function>
+  <Function ID="52" Type="Chaser" Name="FX 07 SPARKLE CHASE" Path="/Effects">
+   <Tempo>Beats</Tempo>
+   <Speed FadeIn="0" FadeOut="0" Duration="1"/>
+   <Direction>Forward</Direction>
+   <RunOrder>Random</RunOrder>
+   <SpeedModes FadeIn="Default" FadeOut="Default" Duration="Common"/>
+   <Step Number="0" FadeIn="0" Hold="1" FadeOut="0">38</Step>
+   <Step Number="1" FadeIn="0" Hold="1" FadeOut="0">39</Step>
+   <Step Number="2" FadeIn="0" Hold="1" FadeOut="0">40</Step>
+   <Step Number="3" FadeIn="0" Hold="1" FadeOut="0">41</Step>
+   <Step Number="4" FadeIn="0" Hold="1" FadeOut="0">42</Step>
+   <Step Number="5" FadeIn="0" Hold="1" FadeOut="0">43</Step>
+   <Step Number="6" FadeIn="0" Hold="1" FadeOut="0">44</Step>
+   <Step Number="7" FadeIn="0" Hold="1" FadeOut="0">45</Step>
+  </Function>
+  <Function ID="53" Type="Chaser" Name="FX 08 SPLIT CROWD SWAP" Path="/Effects">
+   <Tempo>Beats</Tempo>
+   <Speed FadeIn="80" FadeOut="80" Duration="2"/>
+   <Direction>Forward</Direction>
+   <RunOrder>Loop</RunOrder>
+   <SpeedModes FadeIn="Default" FadeOut="Default" Duration="Common"/>
+   <Step Number="0" FadeIn="80" Hold="2" FadeOut="80">26</Step>
+   <Step Number="1" FadeIn="80" Hold="2" FadeOut="80">27</Step>
+   <Step Number="2" FadeIn="80" Hold="2" FadeOut="80">28</Step>
+   <Step Number="3" FadeIn="80" Hold="2" FadeOut="80">29</Step>
+  </Function>
+  <Function ID="54" Type="Chaser" Name="FX 09 BEAT PULSE WASH" Path="/Effects">
+   <Tempo>Beats</Tempo>
+   <Speed FadeIn="120" FadeOut="120" Duration="2"/>
+   <Direction>Forward</Direction>
+   <RunOrder>Loop</RunOrder>
+   <SpeedModes FadeIn="Default" FadeOut="Default" Duration="Common"/>
+   <Step Number="0" FadeIn="120" Hold="2" FadeOut="120">4</Step>
+   <Step Number="1" FadeIn="120" Hold="2" FadeOut="120">5</Step>
+   <Step Number="2" FadeIn="120" Hold="2" FadeOut="120">6</Step>
+   <Step Number="3" FadeIn="120" Hold="2" FadeOut="120">7</Step>
+  </Function>
+  <Function ID="55" Type="Chaser" Name="FX 10 RAVE RANDOM ENGINE" Path="/Engines">
+   <Tempo>Beats</Tempo>
+   <Speed FadeIn="0" FadeOut="0" Duration="1"/>
+   <Direction>Forward</Direction>
+   <RunOrder>Random</RunOrder>
+   <SpeedModes FadeIn="Default" FadeOut="Default" Duration="Common"/>
+   <Step Number="0" FadeIn="0" Hold="1" FadeOut="0">2</Step>
+   <Step Number="1" FadeIn="0" Hold="1" FadeOut="0">5</Step>
+   <Step Number="2" FadeIn="0" Hold="1" FadeOut="0">6</Step>
+   <Step Number="3" FadeIn="0" Hold="1" FadeOut="0">7</Step>
+   <Step Number="4" FadeIn="0" Hold="1" FadeOut="0">8</Step>
+   <Step Number="5" FadeIn="0" Hold="1" FadeOut="0">9</Step>
+   <Step Number="6" FadeIn="0" Hold="1" FadeOut="0">10</Step>
+   <Step Number="7" FadeIn="0" Hold="1" FadeOut="0">11</Step>
+   <Step Number="8" FadeIn="0" Hold="1" FadeOut="0">23</Step>
+   <Step Number="9" FadeIn="0" Hold="1" FadeOut="0">24</Step>
+   <Step Number="10" FadeIn="0" Hold="1" FadeOut="0">25</Step>
+   <Step Number="11" FadeIn="0" Hold="1" FadeOut="0">30</Step>
+   <Step Number="12" FadeIn="0" Hold="1" FadeOut="0">32</Step>
+   <Step Number="13" FadeIn="0" Hold="1" FadeOut="0">34</Step>
+   <Step Number="14" FadeIn="0" Hold="1" FadeOut="0">36</Step>
+   <Step Number="15" FadeIn="0" Hold="1" FadeOut="0">38</Step>
+   <Step Number="16" FadeIn="0" Hold="1" FadeOut="0">40</Step>
+   <Step Number="17" FadeIn="0" Hold="1" FadeOut="0">42</Step>
+   <Step Number="18" FadeIn="0" Hold="1" FadeOut="0">44</Step>
+   <Step Number="19" FadeIn="0" Hold="1" FadeOut="0">45</Step>
+  </Function>
+  <Function ID="56" Type="Chaser" Name="PRESET CLUB RANDOM ENGINE" Path="/Engines">
+   <Tempo>Beats</Tempo>
+   <Speed FadeIn="1" FadeOut="1" Duration="2"/>
+   <Direction>Forward</Direction>
+   <RunOrder>Random</RunOrder>
+   <SpeedModes FadeIn="Default" FadeOut="Default" Duration="Common"/>
+   <Step Number="0" FadeIn="1" Hold="2" FadeOut="1">8</Step>
+   <Step Number="1" FadeIn="1" Hold="2" FadeOut="1">9</Step>
+   <Step Number="2" FadeIn="1" Hold="2" FadeOut="1">12</Step>
+   <Step Number="3" FadeIn="1" Hold="2" FadeOut="1">14</Step>
+   <Step Number="4" FadeIn="1" Hold="2" FadeOut="1">16</Step>
+   <Step Number="5" FadeIn="1" Hold="2" FadeOut="1">18</Step>
+   <Step Number="6" FadeIn="1" Hold="2" FadeOut="1">23</Step>
+   <Step Number="7" FadeIn="1" Hold="2" FadeOut="1">24</Step>
+   <Step Number="8" FadeIn="1" Hold="2" FadeOut="1">26</Step>
+   <Step Number="9" FadeIn="1" Hold="2" FadeOut="1">27</Step>
+   <Step Number="10" FadeIn="1" Hold="2" FadeOut="1">28</Step>
+   <Step Number="11" FadeIn="1" Hold="2" FadeOut="1">29</Step>
+  </Function>
+  <Function ID="57" Type="Chaser" Name="PRESET LOUNGE RANDOM ENGINE" Path="/Engines">
+   <Tempo>Beats</Tempo>
+   <Speed FadeIn="2" FadeOut="2" Duration="8"/>
+   <Direction>Forward</Direction>
+   <RunOrder>Random</RunOrder>
+   <SpeedModes FadeIn="Default" FadeOut="Default" Duration="Common"/>
+   <Step Number="0" FadeIn="2" Hold="8" FadeOut="2">20</Step>
+   <Step Number="1" FadeIn="2" Hold="8" FadeOut="2">21</Step>
+   <Step Number="2" FadeIn="2" Hold="8" FadeOut="2">22</Step>
+   <Step Number="3" FadeIn="2" Hold="8" FadeOut="2">4</Step>
+   <Step Number="4" FadeIn="2" Hold="8" FadeOut="2">5</Step>
+  </Function>
+  <Function ID="58" Type="Chaser" Name="PRESET USER CUSTOM RANDOM" Path="/Engines">
+   <Tempo>Beats</Tempo>
+   <Speed FadeIn="1" FadeOut="1" Duration="2"/>
+   <Direction>Forward</Direction>
+   <RunOrder>Random</RunOrder>
+   <SpeedModes FadeIn="Default" FadeOut="Default" Duration="Common"/>
+   <Step Number="0" FadeIn="1" Hold="2" FadeOut="1">8</Step>
+   <Step Number="1" FadeIn="1" Hold="2" FadeOut="1">9</Step>
+   <Step Number="2" FadeIn="1" Hold="2" FadeOut="1">12</Step>
+   <Step Number="3" FadeIn="1" Hold="2" FadeOut="1">16</Step>
+   <Step Number="4" FadeIn="1" Hold="2" FadeOut="1">23</Step>
+   <Step Number="5" FadeIn="1" Hold="2" FadeOut="1">26</Step>
+   <Step Number="6" FadeIn="1" Hold="2" FadeOut="1">38</Step>
+   <Step Number="7" FadeIn="1" Hold="2" FadeOut="1">41</Step>
+  </Function>
+  <Monitor DisplayMode="0" ShowLabels="0">
+   <Font>Arial,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1</Font>
+   <ChannelStyle>0</ChannelStyle>
+   <ValueStyle>0</ValueStyle>
+   <Grid Width="5" Height="3" Depth="5" Units="0"/>
+  </Monitor>
+ </Engine>
+ <VirtualConsole>
+  <Frame Caption="">
+   <Appearance>
+    <FrameStyle>None</FrameStyle>
+    <ForegroundColor>Default</ForegroundColor>
+    <BackgroundColor>4280295456</BackgroundColor>
+    <BackgroundImage>None</BackgroundImage>
+    <Font>Default</Font>
+   </Appearance>
+   <Button Caption="WHITE OUT STROBE" ID="0" Icon="">
+    <WindowState Visible="True" X="40" Y="40" Width="260" Height="90"/>
+    <Appearance>
+     <FrameStyle>Sunken</FrameStyle>
+     <ForegroundColor>4278190080</ForegroundColor>
+     <BackgroundColor>4294967295</BackgroundColor>
+     <BackgroundImage>None</BackgroundImage>
+     <Font>Default</Font>
+    </Appearance>
+    <Function ID="46"/>
+    <Action>Toggle</Action>
+    <Intensity Adjust="False">100</Intensity>
+   </Button>
+   <Button Caption="STROBE OUT COLOR" ID="1" Icon="">
+    <WindowState Visible="True" X="320" Y="40" Width="260" Height="90"/>
+    <Appearance>
+     <FrameStyle>Sunken</FrameStyle>
+     <ForegroundColor>4294967295</ForegroundColor>
+     <BackgroundColor>4292286752</BackgroundColor>
+     <BackgroundImage>None</BackgroundImage>
+     <Font>Default</Font>
+    </Appearance>
+    <Function ID="47"/>
+    <Action>Toggle</Action>
+    <Intensity Adjust="False">100</Intensity>
+   </Button>
+   <Button Caption="PAIR SWAP" ID="2" Icon="">
+    <WindowState Visible="True" X="600" Y="40" Width="220" Height="90"/>
+    <Appearance>
+     <FrameStyle>Sunken</FrameStyle>
+     <ForegroundColor>4294967295</ForegroundColor>
+     <BackgroundColor>4278221961</BackgroundColor>
+     <BackgroundImage>None</BackgroundImage>
+     <Font>Default</Font>
+    </Appearance>
+    <Function ID="48"/>
+    <Action>Toggle</Action>
+    <Intensity Adjust="False">100</Intensity>
+   </Button>
+   <Button Caption="GAME SHOW BALL" ID="3" Icon="">
+    <WindowState Visible="True" X="840" Y="40" Width="270" Height="90"/>
+    <Appearance>
+     <FrameStyle>Sunken</FrameStyle>
+     <ForegroundColor>4294967295</ForegroundColor>
+     <BackgroundColor>4280246015</BackgroundColor>
+     <BackgroundImage>None</BackgroundImage>
+     <Font>Default</Font>
+    </Appearance>
+    <Function ID="49"/>
+    <Action>Toggle</Action>
+    <Intensity Adjust="False">100</Intensity>
+   </Button>
+   <Button Caption="RAINBOW CHASE" ID="4" Icon="">
+    <WindowState Visible="True" X="1130" Y="40" Width="250" Height="90"/>
+    <Appearance>
+     <FrameStyle>Sunken</FrameStyle>
+     <ForegroundColor>4294967295</ForegroundColor>
+     <BackgroundColor>4286262463</BackgroundColor>
+     <BackgroundImage>None</BackgroundImage>
+     <Font>Default</Font>
+    </Appearance>
+    <Function ID="50"/>
+    <Action>Toggle</Action>
+    <Intensity Adjust="False">100</Intensity>
+   </Button>
+   <Button Caption="SCANNER" ID="5" Icon="">
+    <WindowState Visible="True" X="40" Y="150" Width="220" Height="90"/>
+    <Appearance>
+     <FrameStyle>Sunken</FrameStyle>
+     <ForegroundColor>4278190080</ForegroundColor>
+     <BackgroundColor>4292467161</BackgroundColor>
+     <BackgroundImage>None</BackgroundImage>
+     <Font>Default</Font>
+    </Appearance>
+    <Function ID="51"/>
+    <Action>Toggle</Action>
+    <Intensity Adjust="False">100</Intensity>
+   </Button>
+   <Button Caption="SPARKLE" ID="6" Icon="">
+    <WindowState Visible="True" X="280" Y="150" Width="220" Height="90"/>
+    <Appearance>
+     <FrameStyle>Sunken</FrameStyle>
+     <ForegroundColor>4294967295</ForegroundColor>
+     <BackgroundColor>4279383387</BackgroundColor>
+     <BackgroundImage>None</BackgroundImage>
+     <Font>Default</Font>
+    </Appearance>
+    <Function ID="52"/>
+    <Action>Toggle</Action>
+    <Intensity Adjust="False">100</Intensity>
+   </Button>
+   <Button Caption="SPLIT CROWD" ID="7" Icon="">
+    <WindowState Visible="True" X="520" Y="150" Width="240" Height="90"/>
+    <Appearance>
+     <FrameStyle>Sunken</FrameStyle>
+     <ForegroundColor>4294967295</ForegroundColor>
+     <BackgroundColor>4288479633</BackgroundColor>
+     <BackgroundImage>None</BackgroundImage>
+     <Font>Default</Font>
+    </Appearance>
+    <Function ID="53"/>
+    <Action>Toggle</Action>
+    <Intensity Adjust="False">100</Intensity>
+   </Button>
+   <Button Caption="PULSE WASH" ID="8" Icon="">
+    <WindowState Visible="True" X="780" Y="150" Width="240" Height="90"/>
+    <Appearance>
+     <FrameStyle>Sunken</FrameStyle>
+     <ForegroundColor>4294967295</ForegroundColor>
+     <BackgroundColor>4279726661</BackgroundColor>
+     <BackgroundImage>None</BackgroundImage>
+     <Font>Default</Font>
+    </Appearance>
+    <Function ID="54"/>
+    <Action>Toggle</Action>
+    <Intensity Adjust="False">100</Intensity>
+   </Button>
+   <Button Caption="RAVE RANDOM" ID="9" Icon="">
+    <WindowState Visible="True" X="40" Y="270" Width="250" Height="90"/>
+    <Appearance>
+     <FrameStyle>Sunken</FrameStyle>
+     <ForegroundColor>4294967295</ForegroundColor>
+     <BackgroundColor>4290843167</BackgroundColor>
+     <BackgroundImage>None</BackgroundImage>
+     <Font>Default</Font>
+    </Appearance>
+    <Function ID="55"/>
+    <Action>Toggle</Action>
+    <Intensity Adjust="False">100</Intensity>
+   </Button>
+   <Button Caption="CLUB PRESET" ID="10" Icon="">
+    <WindowState Visible="True" X="310" Y="270" Width="230" Height="90"/>
+    <Appearance>
+     <FrameStyle>Sunken</FrameStyle>
+     <ForegroundColor>4294967295</ForegroundColor>
+     <BackgroundColor>4281994403</BackgroundColor>
+     <BackgroundImage>None</BackgroundImage>
+     <Font>Default</Font>
+    </Appearance>
+    <Function ID="56"/>
+    <Action>Toggle</Action>
+    <Intensity Adjust="False">100</Intensity>
+   </Button>
+   <Button Caption="LOUNGE PRESET" ID="11" Icon="">
+    <WindowState Visible="True" X="560" Y="270" Width="250" Height="90"/>
+    <Appearance>
+     <FrameStyle>Sunken</FrameStyle>
+     <ForegroundColor>4294967295</ForegroundColor>
+     <BackgroundColor>4281886273</BackgroundColor>
+     <BackgroundImage>None</BackgroundImage>
+     <Font>Default</Font>
+    </Appearance>
+    <Function ID="57"/>
+    <Action>Toggle</Action>
+    <Intensity Adjust="False">100</Intensity>
+   </Button>
+   <Button Caption="USER CUSTOM" ID="12" Icon="">
+    <WindowState Visible="True" X="830" Y="270" Width="240" Height="90"/>
+    <Appearance>
+     <FrameStyle>Sunken</FrameStyle>
+     <ForegroundColor>4294967295</ForegroundColor>
+     <BackgroundColor>4284245885</BackgroundColor>
+     <BackgroundImage>None</BackgroundImage>
+     <Font>Default</Font>
+    </Appearance>
+    <Function ID="58"/>
+    <Action>Toggle</Action>
+    <Intensity Adjust="False">100</Intensity>
+   </Button>
+   <Button Caption="STOP ALL" ID="13" Icon="">
+    <WindowState Visible="True" X="1090" Y="270" Width="190" Height="90"/>
+    <Appearance>
+     <FrameStyle>Sunken</FrameStyle>
+     <ForegroundColor>4294967295</ForegroundColor>
+     <BackgroundColor>4279308561</BackgroundColor>
+     <BackgroundImage>None</BackgroundImage>
+     <Font>Default</Font>
+    </Appearance>
+    <Function ID="4294967295"/>
+    <Action>StopAll</Action>
+    <Intensity Adjust="False">100</Intensity>
+   </Button>
+   <Button Caption="BLACKOUT" ID="14" Icon="">
+    <WindowState Visible="True" X="1300" Y="270" Width="190" Height="90"/>
+    <Appearance>
+     <FrameStyle>Sunken</FrameStyle>
+     <ForegroundColor>4294967295</ForegroundColor>
+     <BackgroundColor>4278190080</BackgroundColor>
+     <BackgroundImage>None</BackgroundImage>
+     <Font>Default</Font>
+    </Appearance>
+    <Function ID="4294967295"/>
+    <Action>Blackout</Action>
+    <Intensity Adjust="False">100</Intensity>
+   </Button>
+  </Frame>
+  <Properties>
+   <Size Width="1920" Height="1080"/>
+   <GrandMaster Visible="1" ChannelMode="Intensity" ValueMode="Reduce" SliderMode="Normal"/>
+  </Properties>
+ </VirtualConsole>
+ <SimpleDesk>
+  <Engine/>
+ </SimpleDesk>
+</Workspace>
