@@ -25,8 +25,15 @@ add_library(lightengine::core ALIAS lightengine_core)
 target_sources(
     lightengine_core
     PRIVATE
+        src/artnet_sender.cpp
         src/application.cpp
+        src/os2l_receiver.cpp
+        src/project.cpp
+        include/lightengine/artnet_sender.hpp
         include/lightengine/application.hpp
+        include/lightengine/dmx.hpp
+        include/lightengine/os2l_receiver.hpp
+        include/lightengine/project.hpp
         include/lightengine/version.hpp
 )
 
