@@ -14,6 +14,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(LIGHTENGINE_BUILD_TESTS "Build the light engine tests" ON)
 option(LIGHTENGINE_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
+set(LIGHTENGINE_RASPI_DEPLOY_HOST "root@raspi-dmx" CACHE STRING "SSH target used by the deploy-raspi target")
+set(LIGHTENGINE_RASPI_DEPLOY_DIR "/tmp/light-engine-deploy" CACHE STRING "Temporary directory on the Raspberry Pi")
 
 include(GNUInstallDirs)
 
@@ -60,6 +62,18 @@ add_executable(light-engine app/main.cpp)
 target_link_libraries(light-engine PRIVATE lightengine::core)
 
 install(TARGETS light-engine RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
+add_custom_target(
+    deploy-raspi
+    COMMAND
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/deploy_raspi.sh"
+        "$<TARGET_FILE:light-engine>"
+        "${LIGHTENGINE_RASPI_DEPLOY_HOST}"
+        "${LIGHTENGINE_RASPI_DEPLOY_DIR}"
+    DEPENDS light-engine
+    USES_TERMINAL
+    COMMENT "Deploying light-engine to ${LIGHTENGINE_RASPI_DEPLOY_HOST}"
+)
 
 if(LIGHTENGINE_BUILD_TESTS)
     enable_testing()

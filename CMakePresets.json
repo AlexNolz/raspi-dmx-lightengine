@@ -7,11 +7,11 @@
   },
   "configurePresets": [
     {
-      "name": "debug",
-      "displayName": "Debug",
+      "name": "pc-debug",
+      "displayName": "PC Debug",
       "description": "Local debug build with tests",
       "generator": "Unix Makefiles",
-      "binaryDir": "${sourceDir}/build/debug",
+      "binaryDir": "${sourceDir}/build/pc-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "LIGHTENGINE_BUILD_TESTS": "ON",
@@ -19,31 +19,71 @@
       }
     },
     {
-      "name": "release",
-      "displayName": "Release",
-      "description": "Optimized release build",
+      "name": "pc-release",
+      "displayName": "PC Release",
+      "description": "Optimized local release build",
       "generator": "Unix Makefiles",
-      "binaryDir": "${sourceDir}/build/release",
+      "binaryDir": "${sourceDir}/build/pc-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "LIGHTENGINE_BUILD_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "raspi-native-release",
+      "displayName": "Raspberry Pi Native Release",
+      "description": "Release build when CMake runs directly on the Raspberry Pi",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/raspi-native-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "LIGHTENGINE_BUILD_TESTS": "OFF",
+        "LIGHTENGINE_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "raspi-cross-release",
+      "displayName": "Raspberry Pi Cross Release",
+      "description": "Cross build for Raspberry Pi 1 / ARMv6 Alpine Linux",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/raspi-cross-release",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/raspi-armv6-alpine.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "LIGHTENGINE_BUILD_TESTS": "OFF",
+        "LIGHTENGINE_WARNINGS_AS_ERRORS": "ON",
+        "LIGHTENGINE_RASPI_DEPLOY_HOST": "root@raspi-dmx",
+        "LIGHTENGINE_RASPI_DEPLOY_DIR": "/tmp/light-engine-deploy"
       }
     }
   ],
   "buildPresets": [
     {
-      "name": "debug",
-      "configurePreset": "debug"
+      "name": "pc-debug",
+      "configurePreset": "pc-debug"
     },
     {
-      "name": "release",
-      "configurePreset": "release"
+      "name": "pc-release",
+      "configurePreset": "pc-release"
+    },
+    {
+      "name": "raspi-native-release",
+      "configurePreset": "raspi-native-release"
+    },
+    {
+      "name": "raspi-cross-release",
+      "configurePreset": "raspi-cross-release"
+    },
+    {
+      "name": "deploy-raspi",
+      "configurePreset": "raspi-cross-release",
+      "targets": ["deploy-raspi"]
     }
   ],
   "testPresets": [
     {
-      "name": "debug",
-      "configurePreset": "debug",
+      "name": "pc-debug",
+      "configurePreset": "pc-debug",
       "output": {
         "outputOnFailure": true
       }
