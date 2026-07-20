@@ -13,14 +13,18 @@ Current layout:
 
 ```text
 fixtures/
+  collection.json
   rgb_bar_8seg.json
   zkymzl_11ch_moving_head.json
   stairville_1500w_strobe_2ch.json
-  stairville_af40_fog_1ch.json
 
 shows/
   default.json
 ```
+
+`fixtures/collection.json` is the default fixture set loaded by the current
+engine. It intentionally contains only the fixtures that exist in the current
+rig: LED bar, moving head and strobe.
 
 The intended engine flow is:
 

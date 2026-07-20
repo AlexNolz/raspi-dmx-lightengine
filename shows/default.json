@@ -14,8 +14,7 @@
     { "id": "mh_2", "name": "MH 2", "fixture": "zkymzl_11ch", "universe": 0, "address": 62, "enabled": true },
     { "id": "mh_3", "name": "MH 3", "fixture": "zkymzl_11ch", "universe": 0, "address": 73, "enabled": true },
     { "id": "mh_4", "name": "MH 4", "fixture": "zkymzl_11ch", "universe": 0, "address": 84, "enabled": true },
-    { "id": "strobe_1", "name": "Strobe", "fixture": "stairville_1500w_strobe_2ch", "universe": 0, "address": 1, "enabled": true, "armed": false },
-    { "id": "fog_1", "name": "Fog", "fixture": "stairville_af40_fog_1ch", "universe": 0, "address": 95, "enabled": true, "armed": false }
+    { "id": "strobe_1", "name": "Strobe", "fixture": "stairville_1500w_strobe_2ch", "universe": 0, "address": 1, "enabled": true, "armed": false }
   ],
   "presets": [
     {
