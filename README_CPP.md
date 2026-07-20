@@ -46,6 +46,36 @@ cmake --preset pc-release
 cmake --build --preset pc-release
 ```
 
+## Run locally
+
+Start the C++ executable:
+
+```sh
+cmake --build --preset pc-debug --target run-cpp
+```
+
+Listen for VirtualDJ OS2L TCP messages:
+
+```sh
+cmake --build --preset pc-debug --target listen-os2l
+```
+
+Open the existing Python web UI reference:
+
+```sh
+cmake --build --preset pc-debug --target run-python-web-reference
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8088
+```
+
+The C++ web server is not implemented yet. This target intentionally runs the
+old Python UI as the visual/control reference while the C++ engine is being
+migrated.
+
 ## Raspberry Pi build and deploy
 
 For a native build directly on the Raspberry Pi:

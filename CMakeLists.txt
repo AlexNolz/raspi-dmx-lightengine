@@ -18,6 +18,7 @@ set(LIGHTENGINE_RASPI_DEPLOY_HOST "root@raspi-dmx" CACHE STRING "SSH target used
 set(LIGHTENGINE_RASPI_DEPLOY_DIR "/tmp/light-engine-deploy" CACHE STRING "Temporary directory on the Raspberry Pi")
 
 include(GNUInstallDirs)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 add_library(lightengine_core STATIC)
 add_library(lightengine::core ALIAS lightengine_core)
@@ -70,6 +71,36 @@ endif()
 
 add_executable(light-engine app/main.cpp)
 target_link_libraries(light-engine PRIVATE lightengine::core)
+
+add_custom_target(
+    run-cpp
+    COMMAND "$<TARGET_FILE:light-engine>"
+    DEPENDS light-engine
+    USES_TERMINAL
+    COMMENT "Running the C++ light-engine executable"
+)
+
+add_custom_target(
+    listen-os2l
+    COMMAND "$<TARGET_FILE:light-engine>" --listen-os2l 0.0.0.0 9996
+    DEPENDS light-engine
+    USES_TERMINAL
+    COMMENT "Listening for VirtualDJ OS2L TCP events on 0.0.0.0:9996"
+)
+
+add_custom_target(
+    run-python-web-reference
+    COMMAND
+        "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/light_engine.py"
+        --web-host 127.0.0.1
+        --web-port 8088
+        --os2l-host 0.0.0.0
+        --os2l-port 9996
+        --artnet-host 127.0.0.1
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    USES_TERMINAL
+    COMMENT "Running the existing Python web UI reference on http://127.0.0.1:8088"
+)
 
 install(TARGETS light-engine RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
