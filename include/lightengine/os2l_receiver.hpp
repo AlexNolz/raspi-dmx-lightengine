@@ -6,6 +6,7 @@
 #include <functional>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace lightengine {
 
@@ -39,13 +40,16 @@ public:
     }
 
 private:
-    void receive_loop();
+    void accept_loop();
+    void handle_client(int client_socket, std::string remote_host, std::uint16_t remote_port);
+    void emit_stream_messages(std::string& stream_buffer, const std::string& chunk, const std::string& remote_host, std::uint16_t remote_port);
 
     Os2lEndpoint endpoint_;
     MessageHandler handler_;
     std::atomic_bool running_{false};
-    int socket_{-1};
-    std::thread thread_;
+    int server_socket_{-1};
+    std::thread accept_thread_;
+    std::vector<std::thread> client_threads_;
 };
 
 }  // namespace lightengine

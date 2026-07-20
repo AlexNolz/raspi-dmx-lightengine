@@ -1,6 +1,6 @@
-#include "lightengine/application.hpp"
 #include "lightengine/artnet_sender.hpp"
 #include "lightengine/os2l_receiver.hpp"
+#include "lightengine/version.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -31,7 +31,7 @@ void print_usage() {
         << "Usage:\n"
         << "  light-engine\n"
         << "  light-engine --artnet-test <ipv4> <universe>\n"
-        << "  light-engine --listen-os2l <ipv4> <port>\n";
+        << "  light-engine --listen-os2l <ipv4> <port>   # TCP OS2L server\n";
 }
 
 }  // namespace
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
                     },
                 };
                 receiver.start();
-                std::cout << "Listening for OS2L on " << argv[2] << ':' << argv[3] << '\n';
+                std::cout << "Listening for OS2L TCP on " << argv[2] << ':' << argv[3] << '\n';
                 while (keep_running) {
                     std::this_thread::sleep_for(std::chrono::milliseconds{100});
                 }
@@ -90,7 +90,9 @@ int main(int argc, char** argv) {
             return 2;
         }
 
-        return lightengine::Application{std::cout}.run();
+        std::cout << "Raspberry Pi DMX Light Engine " << lightengine::version << '\n';
+        std::cout << "C++ main is ready.\n";
+        return 0;
     } catch (const std::exception& error) {
         std::cerr << "Fatal error: " << error.what() << '\n';
         return 1;
