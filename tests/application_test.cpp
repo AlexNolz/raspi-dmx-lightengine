@@ -1,8 +1,11 @@
 #include "lightengine/artnet_sender.hpp"
+#include "lightengine/control_command.hpp"
+#include "lightengine/engine_input.hpp"
 #include "lightengine/os2l_event.hpp"
 #include "lightengine/project.hpp"
 
 #include <iostream>
+#include <chrono>
 #include <optional>
 #include <string>
 #include <variant>
@@ -86,6 +89,114 @@ int main() {
     {
         if (lightengine::normalize_os2l_button_name("Color Strobe!") != "colorstrobe") {
             std::cerr << "OS2L button name was not normalized\n";
+            return 1;
+        }
+    }
+
+    {
+        const std::optional<lightengine::ControlCommand> command =
+            lightengine::parse_control_command(R"({"action":"set_mood","mood":88,"custom":true})");
+        if (!command || !std::holds_alternative<lightengine::SetMoodCommand>(*command)) {
+            std::cerr << "set_mood command was not parsed\n";
+            return 1;
+        }
+        const auto mood = std::get<lightengine::SetMoodCommand>(*command);
+        if (mood.mood != 88 || !mood.mark_custom) {
+            std::cerr << "set_mood command contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
+        const std::optional<lightengine::ControlCommand> command =
+            lightengine::parse_control_command(R"({"action":"set_output_master","target":"motion_master","value":0.42})");
+        if (!command || !std::holds_alternative<lightengine::SetOutputMasterCommand>(*command)) {
+            std::cerr << "set_output_master command was not parsed\n";
+            return 1;
+        }
+        const auto output_master = std::get<lightengine::SetOutputMasterCommand>(*command);
+        if (output_master.target != lightengine::OutputMasterTarget::motion || output_master.value != 0.42) {
+            std::cerr << "set_output_master command contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
+        const std::optional<lightengine::ControlCommand> command =
+            lightengine::parse_control_command(R"({"action":"set_layer","layer":"fog","enabled":true})");
+        if (!command || !std::holds_alternative<lightengine::SetLayerCommand>(*command)) {
+            std::cerr << "set_layer command was not parsed\n";
+            return 1;
+        }
+        const auto layer = std::get<lightengine::SetLayerCommand>(*command);
+        if (layer.layer != lightengine::LayerId::fog || !layer.enabled) {
+            std::cerr << "set_layer command contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
+        const std::optional<lightengine::ControlCommand> command =
+            lightengine::parse_control_command(R"({"action":"set_hold_trigger","name":"blackout","held":true})");
+        if (!command || !std::holds_alternative<lightengine::SetHoldTriggerCommand>(*command)) {
+            std::cerr << "set_hold_trigger command was not parsed\n";
+            return 1;
+        }
+        const auto hold = std::get<lightengine::SetHoldTriggerCommand>(*command);
+        if (hold.trigger != lightengine::LiveTriggerId::blackout || !hold.held) {
+            std::cerr << "set_hold_trigger command contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
+        const std::optional<lightengine::ControlCommand> command = lightengine::parse_control_command(
+            R"({"action":"set_artnet","artnet_host":"192.168.137.255","artnet_universe":0,"led_start_channel":3,"segment_count":16})");
+        if (!command || !std::holds_alternative<lightengine::SetArtNetCommand>(*command)) {
+            std::cerr << "set_artnet command was not parsed\n";
+            return 1;
+        }
+        const auto artnet = std::get<lightengine::SetArtNetCommand>(*command);
+        if (artnet.host != "192.168.137.255" || artnet.universe != 0 || artnet.led_start_channel != 3 || artnet.segment_count != 16) {
+            std::cerr << "set_artnet command contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
+        const std::optional<lightengine::ControlCommand> command =
+            lightengine::parse_control_command(R"({"action":"set_fixture_address","fixture":"moving_heads","index":2,"start":73})");
+        if (!command || !std::holds_alternative<lightengine::SetFixtureAddressCommand>(*command)) {
+            std::cerr << "set_fixture_address command was not parsed\n";
+            return 1;
+        }
+        const auto address = std::get<lightengine::SetFixtureAddressCommand>(*command);
+        if (address.fixture != lightengine::PatchFixtureId::moving_heads || address.index != 2 || address.start != 73) {
+            std::cerr << "set_fixture_address command contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
+        const std::optional<lightengine::ControlCommand> command =
+            lightengine::parse_control_command(R"({"action":"set_master","master":5})");
+        if (!command || !std::holds_alternative<lightengine::SetMasterCommand>(*command)) {
+            std::cerr << "set_master command was not parsed\n";
+            return 1;
+        }
+        if (std::get<lightengine::SetMasterCommand>(*command).value != 1.0) {
+            std::cerr << "set_master command was not clamped\n";
+            return 1;
+        }
+    }
+
+    {
+        const auto now = std::chrono::steady_clock::now();
+        const lightengine::EngineInput input = lightengine::make_engine_input(
+            lightengine::Os2lBeatEvent{16, 116.04, 0.8, false},
+            now);
+        if (!std::holds_alternative<lightengine::EngineBeatInput>(input.payload) || input.received_at != now) {
+            std::cerr << "Engine input did not keep beat payload and timestamp\n";
             return 1;
         }
     }
