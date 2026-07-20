@@ -1,8 +1,11 @@
 #include "lightengine/artnet_sender.hpp"
+#include "lightengine/os2l_event.hpp"
 #include "lightengine/project.hpp"
 
 #include <iostream>
+#include <optional>
 #include <string>
+#include <variant>
 
 int main() {
     {
@@ -34,6 +37,55 @@ int main() {
         }
         if (bytes.at(18) != 255 || bytes.back() != 127) {
             std::cerr << "ArtDMX packet did not copy DMX data\n";
+            return 1;
+        }
+    }
+
+    {
+        const std::optional<lightengine::Os2lEvent> event = lightengine::parse_os2l_event(
+            R"({"evt":"beat","change":false,"pos":16,"bpm":116.04,"strength":0.8})");
+        if (!event || !std::holds_alternative<lightengine::Os2lBeatEvent>(*event)) {
+            std::cerr << "OS2L beat event was not parsed\n";
+            return 1;
+        }
+        const auto beat = std::get<lightengine::Os2lBeatEvent>(*event);
+        if (beat.position != 16 || beat.bpm != 116.04 || beat.strength != 0.8 || beat.changed) {
+            std::cerr << "OS2L beat event contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
+        const std::optional<lightengine::Os2lEvent> event =
+            lightengine::parse_os2l_event(R"({"evt":"btn","name":"color_strobe","state":"off"})");
+        if (!event || !std::holds_alternative<lightengine::Os2lButtonEvent>(*event)) {
+            std::cerr << "OS2L button event was not parsed\n";
+            return 1;
+        }
+        const auto button = std::get<lightengine::Os2lButtonEvent>(*event);
+        if (button.name != "colorstrobe" || button.pressed) {
+            std::cerr << "OS2L button event contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
+        const std::optional<lightengine::Os2lEvent> event =
+            lightengine::parse_os2l_event(R"({"evt":"cmd","id":2,"param":100})");
+        if (!event || !std::holds_alternative<lightengine::Os2lCommandEvent>(*event)) {
+            std::cerr << "OS2L command event was not parsed\n";
+            return 1;
+        }
+        const auto command = std::get<lightengine::Os2lCommandEvent>(*event);
+        if (command.id != 2 || command.parameter != 100.0) {
+            std::cerr << "OS2L command event contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
+        if (lightengine::normalize_os2l_button_name("Color Strobe!") != "colorstrobe") {
+            std::cerr << "OS2L button name was not normalized\n";
             return 1;
         }
     }

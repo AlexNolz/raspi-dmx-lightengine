@@ -26,10 +26,12 @@ target_sources(
     lightengine_core
     PRIVATE
         src/artnet_sender.cpp
+        src/os2l_event.cpp
         src/os2l_receiver.cpp
         src/project.cpp
         include/lightengine/artnet_sender.hpp
         include/lightengine/dmx.hpp
+        include/lightengine/os2l_event.hpp
         include/lightengine/os2l_receiver.hpp
         include/lightengine/project.hpp
         include/lightengine/version.hpp
