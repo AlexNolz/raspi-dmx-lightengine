@@ -2,15 +2,48 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug light-engine",
+      "name": "Debug: light-engine",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/build/debug/light-engine",
+      "program": "${workspaceFolder}/build/pc-debug/light-engine",
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
       "externalConsole": false,
       "MIMode": "gdb",
-      "preLaunchTask": "CMake: build debug"
+      "preLaunchTask": "CMake: build PC debug"
+    },
+    {
+      "name": "Debug: Simple Engine",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/pc-debug/light-engine",
+      "args": [
+        "--run-simple-engine",
+        "127.0.0.1",
+        "8088",
+        "${workspaceFolder}/web",
+        "0.0.0.0",
+        "9996",
+        "127.0.0.1",
+        "0"
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "preLaunchTask": "CMake: build PC debug"
+    },
+    {
+      "name": "Debug: OS2L Listener",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/pc-debug/light-engine",
+      "args": ["--listen-os2l", "0.0.0.0", "9996"],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "preLaunchTask": "CMake: build PC debug"
     }
   ]
 }

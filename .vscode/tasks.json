@@ -43,6 +43,30 @@
       "args": ["--build", "--preset", "deploy-raspi"],
       "dependsOn": "CMake: build Raspberry Pi release",
       "problemMatcher": []
+    },
+    {
+      "label": "Run: Simple Engine",
+      "type": "shell",
+      "command": "${workspaceFolder}/.tools/cmake-python/cmake/data/bin/cmake",
+      "args": ["--build", "--preset", "pc-debug", "--target", "run-simple-engine"],
+      "dependsOn": "CMake: build PC debug",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run: OS2L Listener",
+      "type": "shell",
+      "command": "${workspaceFolder}/.tools/cmake-python/cmake/data/bin/cmake",
+      "args": ["--build", "--preset", "pc-debug", "--target", "listen-os2l"],
+      "dependsOn": "CMake: build PC debug",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run: C++ Web UI",
+      "type": "shell",
+      "command": "${workspaceFolder}/.tools/cmake-python/cmake/data/bin/cmake",
+      "args": ["--build", "--preset", "pc-debug", "--target", "serve-web-cpp"],
+      "dependsOn": "CMake: build PC debug",
+      "problemMatcher": []
     }
   ]
 }
