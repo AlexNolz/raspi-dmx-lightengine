@@ -15,3 +15,9 @@ raspi_apks/
 
 # Local agent metadata
 .agents/
+
+# C++ / CMake build output
+build/
+out/
+compile_commands.json
+.cache/
