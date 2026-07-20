@@ -1,0 +1,13 @@
+* text=auto
+
+# Files deployed to Alpine must retain Unix line endings.
+*.py text eol=lf
+*.sh text eol=lf
+*.conf text eol=lf
+*.initd text eol=lf
+*.qxf text eol=lf
+*.qxw text eol=lf
+
+# Windows deployment helper.
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
