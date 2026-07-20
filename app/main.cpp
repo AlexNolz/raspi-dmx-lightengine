@@ -2,6 +2,7 @@
 #include "lightengine/control_command.hpp"
 #include "lightengine/os2l_event.hpp"
 #include "lightengine/os2l_receiver.hpp"
+#include "lightengine/simple_engine.hpp"
 #include "lightengine/version.hpp"
 #include "lightengine/web_server.hpp"
 
@@ -32,13 +33,22 @@ std::uint16_t parse_u16(const char* text) {
     return static_cast<std::uint16_t>(value);
 }
 
+std::uint8_t parse_u8(const char* text) {
+    const int value = std::stoi(text);
+    if (value < 0 || value > 255) {
+        throw std::out_of_range{"value must be in range 0..255"};
+    }
+    return static_cast<std::uint8_t>(value);
+}
+
 void print_usage() {
     std::cout
         << "Usage:\n"
         << "  light-engine\n"
         << "  light-engine --artnet-test <ipv4> <universe>\n"
         << "  light-engine --listen-os2l <ipv4> <port>   # TCP OS2L server\n"
-        << "  light-engine --serve-web <ipv4> <port> <web-root>\n";
+        << "  light-engine --serve-web <ipv4> <port> <web-root>\n"
+        << "  light-engine --run-simple-engine <web-ip> <web-port> <web-root> <os2l-ip> <os2l-port> <artnet-ip> <universe>\n";
 }
 
 void print_os2l_event(const lightengine::Os2lMessage& message) {
@@ -227,6 +237,78 @@ int main(int argc, char** argv) {
                     std::this_thread::sleep_for(std::chrono::milliseconds{100});
                 }
                 server.stop();
+                return 0;
+            }
+
+            if (command == "--run-simple-engine") {
+                if (argc != 9) {
+                    print_usage();
+                    return 2;
+                }
+                std::signal(SIGINT, stop_handler);
+                std::signal(SIGTERM, stop_handler);
+
+                lightengine::SimpleEngine engine{lightengine::SimpleEngineConfig{
+                    argv[7],
+                    parse_u16(argv[8]),
+                    3,
+                    27,
+                    8,
+                }};
+                lightengine::ArtNetSender artnet{lightengine::ArtNetEndpoint{
+                    argv[7],
+                    6454,
+                    lightengine::ArtNetUniverse{parse_u16(argv[8])},
+                }};
+
+                lightengine::Os2lReceiver os2l{
+                    lightengine::Os2lEndpoint{argv[5], parse_u16(argv[6])},
+                    [&](const lightengine::Os2lMessage& message) {
+                        const std::optional<lightengine::Os2lEvent> event = lightengine::parse_os2l_event(message.payload);
+                        if (event) {
+                            engine.apply_os2l_event(*event, message.received_at);
+                        }
+                    },
+                };
+
+                lightengine::WebServer web{
+                    lightengine::WebEndpoint{argv[2], parse_u16(argv[3]), argv[4]},
+                    [&] { return engine.state_json(std::chrono::steady_clock::now()); },
+                    [&](const lightengine::WebControlRequest& request) {
+                        const std::optional<lightengine::ControlCommand> control =
+                            lightengine::parse_control_command(request.payload);
+                        if (!control) {
+                            return lightengine::WebResponse{400, "application/json", R"({"ok":false,"error":"invalid control payload"})"};
+                        }
+                        engine.apply_control_command(*control);
+                        return lightengine::WebResponse{200, "application/json", engine.state_json(std::chrono::steady_clock::now())};
+                    },
+                };
+
+                os2l.start();
+                web.start();
+                std::thread output_thread{[&] {
+                    using clock = std::chrono::steady_clock;
+                    while (keep_running) {
+                        const auto started = clock::now();
+                        artnet.send(engine.render_frame(started));
+                        engine.mark_artnet_packet_sent();
+                        std::this_thread::sleep_until(started + std::chrono::milliseconds{25});
+                    }
+                }};
+
+                std::cout << "Simple C++ Light Engine running\n";
+                std::cout << "Web:   http://" << argv[2] << ':' << argv[3] << '\n';
+                std::cout << "OS2L:  " << argv[5] << ':' << argv[6] << '\n';
+                std::cout << "ArtNet " << argv[7] << " universe " << argv[8] << '\n';
+                while (keep_running) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds{100});
+                }
+                web.stop();
+                os2l.stop();
+                if (output_thread.joinable()) {
+                    output_thread.join();
+                }
                 return 0;
             }
 

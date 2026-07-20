@@ -88,6 +88,15 @@ The C++ web UI currently serves the existing `web/` assets with stubbed
 `/api/state` and typed `/api/control` parsing. The Python target remains useful
 as the behavioral reference while the C++ engine is being migrated.
 
+Run the first simple C++ engine:
+
+```sh
+cmake --build --preset pc-debug --target run-simple-engine
+```
+
+This starts the C++ web UI, listens for OS2L on TCP `0.0.0.0:9996`, renders a
+beat-synced LED-bar pulse, and sends Art-Net to `127.0.0.1` universe `0`.
+
 ## Raspberry Pi build and deploy
 
 For a native build directly on the Raspberry Pi:

@@ -28,6 +28,7 @@ target_sources(
     PRIVATE
         src/artnet_sender.cpp
         src/control_command.cpp
+        src/simple_engine.cpp
         src/os2l_event.cpp
         src/os2l_receiver.cpp
         src/project.cpp
@@ -36,6 +37,7 @@ target_sources(
         include/lightengine/control_command.hpp
         include/lightengine/dmx.hpp
         include/lightengine/engine_input.hpp
+        include/lightengine/simple_engine.hpp
         include/lightengine/os2l_event.hpp
         include/lightengine/os2l_receiver.hpp
         include/lightengine/project.hpp
@@ -96,6 +98,23 @@ add_custom_target(
     DEPENDS light-engine
     USES_TERMINAL
     COMMENT "Serving the C++ web UI stub on http://127.0.0.1:8088"
+)
+
+add_custom_target(
+    run-simple-engine
+    COMMAND
+        "$<TARGET_FILE:light-engine>"
+        --run-simple-engine
+        127.0.0.1
+        8088
+        "${CMAKE_CURRENT_SOURCE_DIR}/web"
+        0.0.0.0
+        9996
+        127.0.0.1
+        0
+    DEPENDS light-engine
+    USES_TERMINAL
+    COMMENT "Running the simple C++ light engine on http://127.0.0.1:8088"
 )
 
 add_custom_target(

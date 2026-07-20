@@ -1,0 +1,97 @@
+#pragma once
+
+#include "lightengine/artnet_sender.hpp"
+#include "lightengine/control_command.hpp"
+#include "lightengine/dmx.hpp"
+#include "lightengine/os2l_event.hpp"
+
+#include <chrono>
+#include <cstdint>
+#include <mutex>
+#include <string>
+#include <vector>
+
+namespace lightengine {
+
+struct Rgb final {
+    std::uint8_t r{};
+    std::uint8_t g{};
+    std::uint8_t b{};
+};
+
+struct BeatSnapshot final {
+    double beat{0.0};
+    double phase{0.0};
+    std::int64_t position{};
+    double bpm{120.0};
+    double strength{1.0};
+    bool locked_to_os2l{false};
+};
+
+class BeatClock final {
+public:
+    void on_beat(const Os2lBeatEvent& beat, std::chrono::steady_clock::time_point received_at);
+    [[nodiscard]] BeatSnapshot snapshot(std::chrono::steady_clock::time_point now) const;
+
+private:
+    std::int64_t position_{};
+    double bpm_{120.0};
+    double strength_{1.0};
+    std::chrono::steady_clock::time_point last_beat_at_{};
+    bool locked_{false};
+};
+
+struct SimpleEngineConfig final {
+    std::string artnet_host{"127.0.0.1"};
+    std::uint16_t artnet_universe{};
+    std::uint16_t bar1_start{3};
+    std::uint16_t bar2_start{27};
+    std::uint8_t segments_per_bar{8};
+};
+
+class SimpleEngine final {
+public:
+    explicit SimpleEngine(SimpleEngineConfig config);
+
+    void apply_os2l_event(const Os2lEvent& event, std::chrono::steady_clock::time_point received_at);
+    void apply_control_command(const ControlCommand& command);
+
+    [[nodiscard]] DmxFrame render_frame(std::chrono::steady_clock::time_point now);
+    [[nodiscard]] std::string state_json(std::chrono::steady_clock::time_point now) const;
+
+    void mark_artnet_packet_sent();
+
+private:
+    void render_bar(DmxFrame& frame, std::uint16_t start_channel, const BeatSnapshot& beat, double master);
+    void set_rgb(DmxFrame& frame, std::uint16_t start_channel, std::uint8_t segment, Rgb color);
+    void apply_preset_locked(const std::string& preset);
+
+    mutable std::mutex mutex_;
+    SimpleEngineConfig config_;
+    BeatClock beat_clock_;
+    bool running_{false};
+    bool blackout_{false};
+    bool blackout_held_{false};
+    bool whiteout_held_{false};
+    bool color_strobe_held_{false};
+    bool strobe_out_held_{false};
+    bool led_layer_enabled_{true};
+    bool motion_layer_enabled_{true};
+    bool strobe_armed_{false};
+    bool strobe_beat_pulse_{false};
+    double master_{1.0};
+    double led_master_{1.0};
+    double motion_master_{1.0};
+    double strobe_master_{1.0};
+    double strobe_speed_{1.0};
+    std::uint8_t mood_{58};
+    std::string preset_{"club"};
+    std::vector<std::string> active_effects_{"pulse", "scanner", "comet"};
+    std::vector<std::string> active_scenes_{"beat_drive"};
+    std::uint64_t os2l_messages_{};
+    std::uint64_t artnet_packets_{};
+    std::chrono::steady_clock::time_point last_os2l_at_{};
+    std::vector<Rgb> preview_;
+};
+
+}  // namespace lightengine

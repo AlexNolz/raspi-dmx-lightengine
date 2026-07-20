@@ -3,6 +3,7 @@
 #include "lightengine/engine_input.hpp"
 #include "lightengine/os2l_event.hpp"
 #include "lightengine/project.hpp"
+#include "lightengine/simple_engine.hpp"
 
 #include <iostream>
 #include <chrono>
@@ -197,6 +198,38 @@ int main() {
             now);
         if (!std::holds_alternative<lightengine::EngineBeatInput>(input.payload) || input.received_at != now) {
             std::cerr << "Engine input did not keep beat payload and timestamp\n";
+            return 1;
+        }
+    }
+
+    {
+        lightengine::BeatClock clock;
+        const auto now = std::chrono::steady_clock::now();
+        clock.on_beat(lightengine::Os2lBeatEvent{32, 120.0, 0.75, false}, now);
+        const lightengine::BeatSnapshot snapshot = clock.snapshot(now + std::chrono::milliseconds{125});
+        if (snapshot.position != 32 || snapshot.bpm != 120.0 || snapshot.strength != 0.75 || !snapshot.locked_to_os2l) {
+            std::cerr << "BeatClock did not keep OS2L beat values\n";
+            return 1;
+        }
+        if (snapshot.phase < 0.24 || snapshot.phase > 0.26) {
+            std::cerr << "BeatClock phase is not synced to OS2L beat time\n";
+            return 1;
+        }
+    }
+
+    {
+        lightengine::SimpleEngine engine{lightengine::SimpleEngineConfig{}};
+        const auto now = std::chrono::steady_clock::now();
+        engine.apply_control_command(lightengine::SetRunningCommand{true});
+        engine.apply_os2l_event(lightengine::Os2lBeatEvent{12, 100.0, 0.8, false}, now);
+        const lightengine::DmxFrame frame = engine.render_frame(now);
+        if (frame.at(2) == 0 && frame.at(3) == 0 && frame.at(4) == 0) {
+            std::cerr << "SimpleEngine did not render LED bar DMX values while running\n";
+            return 1;
+        }
+        const std::string state = engine.state_json(now);
+        if (state.find(R"("beat_pos":12)") == std::string::npos || state.find(R"("os2l_connected":true)") == std::string::npos) {
+            std::cerr << "SimpleEngine state does not expose beat sync\n";
             return 1;
         }
     }
