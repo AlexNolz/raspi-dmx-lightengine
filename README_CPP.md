@@ -60,6 +60,18 @@ Listen for VirtualDJ OS2L TCP messages:
 cmake --build --preset pc-debug --target listen-os2l
 ```
 
+Open the C++ web UI stub:
+
+```sh
+cmake --build --preset pc-debug --target serve-web-cpp
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8088
+```
+
 Open the existing Python web UI reference:
 
 ```sh
@@ -72,9 +84,9 @@ Then open:
 http://127.0.0.1:8088
 ```
 
-The C++ web server is not implemented yet. This target intentionally runs the
-old Python UI as the visual/control reference while the C++ engine is being
-migrated.
+The C++ web UI currently serves the existing `web/` assets with stubbed
+`/api/state` and typed `/api/control` parsing. The Python target remains useful
+as the behavioral reference while the C++ engine is being migrated.
 
 ## Raspberry Pi build and deploy
 

@@ -31,6 +31,7 @@ target_sources(
         src/os2l_event.cpp
         src/os2l_receiver.cpp
         src/project.cpp
+        src/web_server.cpp
         include/lightengine/artnet_sender.hpp
         include/lightengine/control_command.hpp
         include/lightengine/dmx.hpp
@@ -39,6 +40,7 @@ target_sources(
         include/lightengine/os2l_receiver.hpp
         include/lightengine/project.hpp
         include/lightengine/version.hpp
+        include/lightengine/web_server.hpp
 )
 
 target_compile_features(lightengine_core PUBLIC cxx_std_20)
@@ -86,6 +88,14 @@ add_custom_target(
     DEPENDS light-engine
     USES_TERMINAL
     COMMENT "Listening for VirtualDJ OS2L TCP events on 0.0.0.0:9996"
+)
+
+add_custom_target(
+    serve-web-cpp
+    COMMAND "$<TARGET_FILE:light-engine>" --serve-web 127.0.0.1 8088 "${CMAKE_CURRENT_SOURCE_DIR}/web"
+    DEPENDS light-engine
+    USES_TERMINAL
+    COMMENT "Serving the C++ web UI stub on http://127.0.0.1:8088"
 )
 
 add_custom_target(
