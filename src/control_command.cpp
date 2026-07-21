@@ -369,6 +369,7 @@ std::optional<ControlCommand> parse_control_command(const std::string& payload) 
         return SetGoboControlCommand{
             field_bool(*fields, "enabled").value_or(false),
             field_string(*fields, "mode").value_or("beat_step"),
+            field_string(*fields, "selected_gobo").value_or("open"),
             field_bool(*fields, "highpoint_only").value_or(false),
             field_bool(*fields, "shake_enabled").value_or(false),
             clamp_double(field_double(*fields, "shake_mood_threshold").value_or(0.62), 0.0, 1.0),

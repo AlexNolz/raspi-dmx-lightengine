@@ -51,4 +51,22 @@ Rgb RgbWashBar::wash_color(const std::size_t index) const {
     return washes_.at(index).color();
 }
 
+void Zkymzl11MovingHead::render_to(DmxFrame& frame, const Zkymzl11Look& look) const {
+    const std::size_t start = start_address_.zero_based();
+    if (start + 10U >= frame.size()) {
+        throw std::out_of_range{"ZKYMZL 11CH fixture exceeds the DMX universe"};
+    }
+    frame.at(start + 0U) = look.pan;
+    frame.at(start + 1U) = 0;
+    frame.at(start + 2U) = look.tilt;
+    frame.at(start + 3U) = 0;
+    frame.at(start + 4U) = look.color_wheel;
+    frame.at(start + 5U) = look.gobo;
+    frame.at(start + 6U) = look.shutter;
+    frame.at(start + 7U) = look.dimmer;
+    frame.at(start + 8U) = look.movement_speed;
+    frame.at(start + 9U) = look.reset;
+    frame.at(start + 10U) = 0;
+}
+
 }  // namespace lightengine

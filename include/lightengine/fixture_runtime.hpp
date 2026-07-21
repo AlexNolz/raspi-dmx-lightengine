@@ -49,4 +49,25 @@ private:
     std::vector<RgbWash> washes_;
 };
 
+struct Zkymzl11Look final {
+    std::uint8_t pan{85};
+    std::uint8_t tilt{179};
+    std::uint8_t color_wheel{3};
+    std::uint8_t gobo{};
+    std::uint8_t shutter{};
+    std::uint8_t dimmer{};
+    std::uint8_t movement_speed{150};
+    std::uint8_t reset{};
+};
+
+class Zkymzl11MovingHead final {
+public:
+    explicit Zkymzl11MovingHead(DmxAddress start_address) : start_address_{start_address} {}
+
+    void render_to(DmxFrame& frame, const Zkymzl11Look& look) const;
+
+private:
+    DmxAddress start_address_;
+};
+
 }  // namespace lightengine

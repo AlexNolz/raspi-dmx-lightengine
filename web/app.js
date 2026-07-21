@@ -6,6 +6,7 @@ let effectsBuilt = false;
 let motionBuilt = false;
 let motionScenesBuilt = false;
 let goboModesBuilt = false;
+let gobosBuilt = false;
 let rigBuilt = false;
 let pendingSlider = null;
 
@@ -37,6 +38,7 @@ const motionBox = document.querySelector("#motionModes");
 const motionScenesBox = document.querySelector("#motionScenes");
 const goboEnabled = document.querySelector("#goboEnabled");
 const goboMode = document.querySelector("#goboMode");
+const goboSelect = document.querySelector("#goboSelect");
 const goboHighpointOnly = document.querySelector("#goboHighpointOnly");
 const goboShakeEnabled = document.querySelector("#goboShakeEnabled");
 const goboShakeMood = document.querySelector("#goboShakeMood");
@@ -105,8 +107,18 @@ function render(state) {
       return option;
     }));
   }
+  if (!gobosBuilt && state.gobos) {
+    gobosBuilt = true;
+    goboSelect.replaceChildren(...Object.entries(state.gobos).map(([key, label]) => {
+      const option = document.createElement("option");
+      option.value = key;
+      option.textContent = label;
+      return option;
+    }));
+  }
   goboEnabled.checked = Boolean(goboConfig.enabled);
   goboMode.value = goboConfig.mode || "beat_step";
+  goboSelect.value = goboConfig.selected_gobo || "open";
   goboHighpointOnly.checked = Boolean(goboConfig.highpoint_only);
   goboShakeEnabled.checked = Boolean(goboConfig.shake_enabled);
   goboShakeMood.value = Math.round((goboConfig.shake_mood_threshold ?? 0.62) * 100);
@@ -140,7 +152,6 @@ function render(state) {
       button.type = "button";
       button.dataset.motionMode = key;
       button.textContent = label;
-      button.disabled = true;
       button.addEventListener("click", () => send({ action: "set_motion_mode", motion_mode: key }));
       return button;
     }));
@@ -158,7 +169,6 @@ function render(state) {
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.dataset.motionScene = key;
-      checkbox.disabled = true;
       checkbox.addEventListener("change", () => {
         send({ action: "toggle_motion_scene", scene: key, enabled: checkbox.checked });
       });
@@ -335,6 +345,7 @@ function sendGoboControl() {
     action: "set_gobo_control",
     enabled: goboEnabled.checked,
     mode: goboMode.value,
+    selected_gobo: goboSelect.value,
     highpoint_only: goboHighpointOnly.checked,
     shake_enabled: goboShakeEnabled.checked,
     shake_mood_threshold: Number(goboShakeMood.value) / 100
@@ -343,6 +354,7 @@ function sendGoboControl() {
 
 goboEnabled.addEventListener("change", sendGoboControl);
 goboMode.addEventListener("change", sendGoboControl);
+goboSelect.addEventListener("change", sendGoboControl);
 goboHighpointOnly.addEventListener("change", sendGoboControl);
 goboShakeEnabled.addEventListener("change", sendGoboControl);
 goboShakeMood.addEventListener("input", () => {
@@ -351,6 +363,7 @@ goboShakeMood.addEventListener("input", () => {
     action: "set_gobo_control",
     enabled: goboEnabled.checked,
     mode: goboMode.value,
+    selected_gobo: goboSelect.value,
     highpoint_only: goboHighpointOnly.checked,
     shake_enabled: goboShakeEnabled.checked,
     shake_mood_threshold: Number(goboShakeMood.value) / 100

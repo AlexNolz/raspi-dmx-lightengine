@@ -17,6 +17,13 @@ std::uint8_t to_dmx(const double value) {
     return static_cast<std::uint8_t>(std::lround(clamp01(value) * 255.0));
 }
 
+std::uint8_t gobo_value(const std::string& name) {
+    constexpr std::array<const char*, 8> names{"open", "gobo_1", "gobo_2", "gobo_3", "gobo_4", "gobo_5", "gobo_6", "gobo_7"};
+    constexpr std::array<std::uint8_t, 8> values{0, 10, 18, 26, 34, 42, 50, 58};
+    const auto item = std::find(names.begin(), names.end(), name);
+    return item == names.end() ? 0 : values.at(static_cast<std::size_t>(std::distance(names.begin(), item)));
+}
+
 std::string json_bool(const bool value) {
     return value ? "true" : "false";
 }
@@ -113,7 +120,7 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
                 if (typed_command.layer == LayerId::led_bars) {
                     led_layer_enabled_ = typed_command.enabled;
                 } else if (typed_command.layer == LayerId::motion) {
-                    motion_layer_enabled_ = false;
+                    motion_layer_enabled_ = typed_command.enabled;
                 } else if (typed_command.layer == LayerId::fog) {
                     fog_layer_enabled_ = typed_command.enabled;
                 }
@@ -146,10 +153,11 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
                 set_enabled(active_scenes_, typed_command.scene, typed_command.enabled);
                 preset_ = "custom";
             } else if constexpr (std::is_same_v<Command, SetGoboControlCommand>) {
-                gobo_enabled_ = false;
+                gobo_enabled_ = typed_command.enabled;
                 gobo_mode_ = typed_command.mode;
+                selected_gobo_ = typed_command.selected_gobo;
                 gobo_highpoint_only_ = typed_command.highpoint_only;
-                gobo_shake_enabled_ = false;
+                gobo_shake_enabled_ = typed_command.shake_enabled;
                 gobo_shake_mood_threshold_ = typed_command.shake_mood_threshold;
                 preset_ = "custom";
             } else if constexpr (std::is_same_v<Command, SetArtNetCommand>) {
@@ -221,14 +229,19 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
     bar1_.clear();
     bar2_.clear();
 
+    const BeatSnapshot beat = beat_clock_.snapshot(now);
     if (!running_ || blackout_ || blackout_held_) {
+        render_safe_moving_head_blackout(frame);
         return frame;
     }
 
-    const BeatSnapshot beat = beat_clock_.snapshot(now);
     render_auxiliary_fixtures(frame, beat, now);
     if (!led_layer_enabled_) {
-        render_safe_moving_head_blackout(frame);
+        if (motion_layer_enabled_) {
+            render_moving_heads(frame, beat);
+        } else {
+            render_safe_moving_head_blackout(frame);
+        }
         return frame;
     }
     const RgbSceneContext scene_context{
@@ -273,7 +286,11 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
     for (std::size_t index = 0; index < bar2_.size(); ++index) {
         preview_.at(index + bar1_.size()) = bar2_.wash_color(index);
     }
-    render_safe_moving_head_blackout(frame);
+    if (motion_layer_enabled_) {
+        render_moving_heads(frame, beat);
+    } else {
+        render_safe_moving_head_blackout(frame);
+    }
     return frame;
 }
 
@@ -313,6 +330,7 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(","motion_mode":")" << motion_mode_ << '"'
         << R"(,"gobo":{"enabled":)" << json_bool(gobo_enabled_)
         << R"(,"mode":")" << gobo_mode_
+        << R"(","selected_gobo":")" << selected_gobo_
         << R"(","highpoint_only":)" << json_bool(gobo_highpoint_only_)
         << R"(,"shake_enabled":)" << json_bool(gobo_shake_enabled_)
         << R"(,"shake_mood_threshold":)" << gobo_shake_mood_threshold_
@@ -329,10 +347,10 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"({"name":"LED Bar 1","start":)" << config_.bar1_start << R"(,"segments":8,"enabled":true},)"
         << R"({"name":"LED Bar 2","start":)" << config_.bar2_start << R"(,"segments":8,"enabled":true}])"
         << R"(,"moving_heads":[)"
-        << "{\"name\":\"MH 1 - Sicherheitssperre\",\"start\":" << moving_head_starts_.at(0) << R"(,"channels":11,"enabled":false},)"
-        << "{\"name\":\"MH 2 - Sicherheitssperre\",\"start\":" << moving_head_starts_.at(1) << R"(,"channels":11,"enabled":false},)"
-        << "{\"name\":\"MH 3 - Sicherheitssperre\",\"start\":" << moving_head_starts_.at(2) << R"(,"channels":11,"enabled":false},)"
-        << "{\"name\":\"MH 4 - Sicherheitssperre\",\"start\":" << moving_head_starts_.at(3) << R"(,"channels":11,"enabled":false}])"
+        << R"({"name":"MH 1","start":)" << moving_head_starts_.at(0) << R"(,"channels":11,"enabled":true},)"
+        << R"({"name":"MH 2","start":)" << moving_head_starts_.at(1) << R"(,"channels":11,"enabled":true},)"
+        << R"({"name":"MH 3","start":)" << moving_head_starts_.at(2) << R"(,"channels":11,"enabled":true},)"
+        << R"({"name":"MH 4","start":)" << moving_head_starts_.at(3) << R"(,"channels":11,"enabled":true}])"
         << R"(,"strobe":{"name":"Stairville 1500W Strobe","start":)" << strobe_start_ << R"(,"channels":2,"enabled":true,"armed":)"
         << json_bool(strobe_armed_) << R"(,"beat_pulse":)" << json_bool(strobe_beat_pulse_)
         << R"(,"master":)" << strobe_master_ << R"(,"speed":)" << strobe_speed_
@@ -340,9 +358,10 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(,"channels":1,"enabled":true,"armed":)" << json_bool(fog_armed_) << "}}}";
 
     out << R"(,"effects":)" << rgb_scenes_.effects_json();
-    out << R"(,"motion_modes":{"auto":"Auto","center_pulse":"Mitte Pulse","point_chase":"Punkt Chase","line_sweep":"Links/Rechts Sweep","depth_sweep":"Vorne/Hinten Sweep","cross_pairs":"2 Links / 2 Rechts","split_strobe":"Links/Rechts Strobe","x_cross":"X Cross","color_fan":"Color Fan","pair_random":"Paare Random"})";
+    out << R"(,"motion_modes":{"auto":"Auto","center":"Mitte / Gobo-Test","center_pulse":"Mitte Pulse","point_chase":"Punkt Chase","line_sweep":"Links/Rechts Sweep","depth_sweep":"Vorne/Hinten Sweep","cross_pairs":"2 Links / 2 Rechts","split_strobe":"Links/Rechts Strobe","x_cross":"X Cross","color_fan":"Color Fan","pair_random":"Paare Random"})";
     out << R"(,"motion_scenes":{"mh_center_pulse":"MH Center Pulse","mh_cross_sweep":"MH Cross Sweep","mh_rave_hits":"MH Rave Hits"})";
-    out << R"(,"gobo_modes":{"static":"Fest","beat_step":"Beat Step","random_beat":"Zufällig auf Beat","phrase_random":"Zufällig pro Phrase"})";
+    out << R"(,"gobo_modes":{"static":"Manuell","beat_step":"Beat Step","random_beat":"Zufällig auf Beat","phrase_random":"Zufällig pro Phrase"})";
+    out << R"(,"gobos":{"open":"Offen","gobo_1":"Gobo 1","gobo_2":"Gobo 2","gobo_3":"Gobo 3","gobo_4":"Gobo 4","gobo_5":"Gobo 5","gobo_6":"Gobo 6","gobo_7":"Gobo 7"})";
     out << R"(,"presets":["lounge","club","rave","game_show","rgb_hard","custom"],"show":{},"preview":[)";
     for (std::size_t index = 0; index < preview_.size(); ++index) {
         if (index != 0) {
@@ -381,10 +400,85 @@ void SimpleEngine::render_safe_moving_head_blackout(DmxFrame& frame) const {
         if (start_address > dmx_channel_count - 10U) {
             continue;
         }
-        const std::size_t start = DmxAddress{start_address}.zero_based();
-        for (std::size_t offset = 0; offset < 11U; ++offset) {
-            frame.at(start + offset) = 0;
+        Zkymzl11MovingHead{DmxAddress{start_address}}.render_to(frame, Zkymzl11Look{});
+    }
+}
+
+void SimpleEngine::render_moving_heads(DmxFrame& frame, const BeatSnapshot& beat) const {
+    constexpr std::array<std::uint8_t, 8> colors{3, 11, 18, 25, 70, 80, 90, 100};
+    constexpr std::array<std::uint8_t, 8> gobos{0, 10, 18, 26, 34, 42, 50, 58};
+    const double mood = static_cast<double>(mood_) / 100.0;
+    const double beat_hit = std::exp(-beat.phase * (3.0 + mood * 6.0));
+
+    std::string scene = motion_mode_;
+    if (scene == "auto") {
+        if (active_scenes_.empty()) {
+            scene = "mh_center_pulse";
+        } else {
+            const auto phrase = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 16);
+            scene = active_scenes_.at(phrase % active_scenes_.size());
         }
+    }
+
+    for (std::size_t index = 0; index < moving_head_starts_.size(); ++index) {
+        const std::uint16_t start_address = moving_head_starts_.at(index);
+        if (start_address > dmx_channel_count - 10U) {
+            continue;
+        }
+
+        Zkymzl11Look look;
+        double level = 0.55 + mood * 0.30;
+        if (scene == "mh_cross_sweep" || scene == "line_sweep" || scene == "x_cross") {
+            const double wave = std::sin(beat.beat * (0.28 + mood * 0.32) + static_cast<double>(index) * 1.5707963268);
+            look.pan = static_cast<std::uint8_t>(std::lround(85.0 + wave * 45.0));
+            look.tilt = static_cast<std::uint8_t>(179 + (index % 2U == 0U ? -10 : 10));
+            level = 0.62 + beat_hit * 0.25;
+        } else if (scene == "mh_rave_hits" || scene == "split_strobe" || scene == "pair_random") {
+            const auto step = static_cast<std::size_t>(std::max<std::int64_t>(0, static_cast<std::int64_t>(std::floor(beat.beat))));
+            const bool right = (step + index / 2U) % 2U != 0U;
+            look.pan = right ? 125 : 45;
+            look.tilt = static_cast<std::uint8_t>(index % 2U == 0U ? 165 : 193);
+            level = 0.32 + beat_hit * 0.68;
+        } else if (scene == "center") {
+            look.pan = 85;
+            look.tilt = 179;
+            level = 0.72;
+        } else {
+            look.pan = 85;
+            look.tilt = 179;
+            level = 0.42 + beat_hit * 0.48;
+        }
+
+        const auto color_step = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 8);
+        look.color_wheel = colors.at((color_step + index / 2U) % colors.size());
+
+        std::uint8_t selected_gobo = 0;
+        if (gobo_enabled_) {
+            if (gobo_mode_ == "static") {
+                selected_gobo = gobo_value(selected_gobo_);
+            } else if (gobo_mode_ == "phrase_random") {
+                const auto phrase = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 16);
+                selected_gobo = gobos.at((phrase * 5U + index * 3U) % gobos.size());
+            } else if (gobo_mode_ == "random_beat") {
+                const auto step = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position));
+                selected_gobo = gobos.at((step * 5U + index * 3U + 1U) % gobos.size());
+            } else {
+                const auto step = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 2);
+                selected_gobo = gobos.at((step + index) % gobos.size());
+            }
+            const bool highpoint = beat.strength >= 0.75 || (beat.position % 16 >= 0 && beat.position % 16 < 4);
+            if (gobo_highpoint_only_ && !highpoint) {
+                selected_gobo = 0;
+            }
+            if (gobo_shake_enabled_ && selected_gobo > 0U && mood >= gobo_shake_mood_threshold_) {
+                selected_gobo = static_cast<std::uint8_t>(std::min(127, static_cast<int>(selected_gobo) + 64));
+            }
+        }
+        look.gobo = selected_gobo;
+        look.dimmer = to_dmx(clamp01(level * master_ * motion_master_));
+        look.shutter = look.dimmer > 0U ? 10 : 0;
+        look.movement_speed = static_cast<std::uint8_t>(std::lround(210.0 - mood * 120.0));
+        Zkymzl11MovingHead{DmxAddress{start_address}}.render_to(frame, look);
     }
 }
 
@@ -475,8 +569,6 @@ void SimpleEngine::apply_preset_locked(const std::string& preset) {
         gobo_shake_enabled_ = false;
         preset_ = "club";
     }
-    gobo_enabled_ = false;
-    gobo_shake_enabled_ = false;
     selected_effect_ = active_effects_.front();
 }
 

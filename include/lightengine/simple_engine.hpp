@@ -45,6 +45,7 @@ private:
     void select_next_effect_locked();
     [[nodiscard]] std::string active_effect_label_locked() const;
     void render_safe_moving_head_blackout(DmxFrame& frame) const;
+    void render_moving_heads(DmxFrame& frame, const BeatSnapshot& beat) const;
     void render_auxiliary_fixtures(DmxFrame& frame, const BeatSnapshot& beat, std::chrono::steady_clock::time_point now) const;
 
     mutable std::mutex mutex_;
@@ -57,7 +58,7 @@ private:
     bool color_strobe_held_{false};
     bool strobe_out_held_{false};
     bool led_layer_enabled_{true};
-    bool motion_layer_enabled_{false};
+    bool motion_layer_enabled_{true};
     bool fog_layer_enabled_{false};
     bool strobe_armed_{false};
     bool fog_armed_{false};
@@ -75,6 +76,7 @@ private:
     std::string preset_{"club"};
     std::string motion_mode_{"auto"};
     std::string gobo_mode_{"beat_step"};
+    std::string selected_gobo_{"open"};
     std::vector<std::string> active_effects_{"rgb_static", "rgb_beat_pulse", "rgb_comet"};
     std::string selected_effect_{"rgb_static"};
     std::vector<std::string> active_scenes_{"mh_center_pulse"};

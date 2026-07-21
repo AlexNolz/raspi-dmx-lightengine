@@ -124,6 +124,18 @@ int main() {
     }
 
     {
+        lightengine::DmxFrame frame{};
+        lightengine::Zkymzl11MovingHead head{lightengine::DmxAddress{51}};
+        head.render_to(frame, lightengine::Zkymzl11Look{85, 179, 11, 26, 10, 160, 140, 0});
+        if (frame.at(50) != 85 || frame.at(51) != 0 || frame.at(52) != 179 || frame.at(54) != 11 ||
+            frame.at(55) != 26 || frame.at(56) != 10 || frame.at(57) != 160 || frame.at(58) != 140 ||
+            frame.at(59) != 0) {
+            std::cerr << "Zkymzl11MovingHead rendered an incorrect channel mapping\n";
+            return 1;
+        }
+    }
+
+    {
         const std::optional<lightengine::ControlCommand> command =
             lightengine::parse_control_command(R"({"action":"set_mood","mood":88,"custom":true})");
         if (!command || !std::holds_alternative<lightengine::SetMoodCommand>(*command)) {
@@ -209,13 +221,13 @@ int main() {
 
     {
         const std::optional<lightengine::ControlCommand> command = lightengine::parse_control_command(
-            R"({"action":"set_gobo_control","enabled":true,"mode":"random_beat","highpoint_only":true,"shake_enabled":true,"shake_mood_threshold":0.74})");
+            R"({"action":"set_gobo_control","enabled":true,"mode":"random_beat","selected_gobo":"gobo_3","highpoint_only":true,"shake_enabled":true,"shake_mood_threshold":0.74})");
         if (!command || !std::holds_alternative<lightengine::SetGoboControlCommand>(*command)) {
             std::cerr << "set_gobo_control command was not parsed\n";
             return 1;
         }
         const auto gobo = std::get<lightengine::SetGoboControlCommand>(*command);
-        if (!gobo.enabled || gobo.mode != "random_beat" || !gobo.highpoint_only || !gobo.shake_enabled ||
+        if (!gobo.enabled || gobo.mode != "random_beat" || gobo.selected_gobo != "gobo_3" || !gobo.highpoint_only || !gobo.shake_enabled ||
             gobo.shake_mood_threshold < 0.73 || gobo.shake_mood_threshold > 0.75) {
             std::cerr << "set_gobo_control command contains wrong values\n";
             return 1;
@@ -293,8 +305,9 @@ int main() {
             std::cerr << "SimpleEngine enabled ArtNet output before Start\n";
             return 1;
         }
-        if (stopped_frame.at(50) != 0 || stopped_frame.at(52) != 0 || stopped_frame.at(58) != 0) {
-            std::cerr << "SimpleEngine did not keep moving heads blacked out while stopped\n";
+        if (stopped_frame.at(50) != 85 || stopped_frame.at(52) != 179 || stopped_frame.at(56) != 0 ||
+            stopped_frame.at(57) != 0 || stopped_frame.at(58) != 150) {
+            std::cerr << "SimpleEngine did not park moving heads with closed shutter while stopped\n";
             return 1;
         }
         engine.apply_control_command(lightengine::SetRunningCommand{true});
@@ -308,8 +321,8 @@ int main() {
             std::cerr << "SimpleEngine did not render LED bar DMX values while running\n";
             return 1;
         }
-        if (frame.at(50) != 0 || frame.at(51) != 0 || frame.at(52) != 0 || frame.at(58) != 0) {
-            std::cerr << "SimpleEngine moved moving-head channels before the renderer is ready\n";
+        if (frame.at(50) != 85 || frame.at(52) != 179 || frame.at(56) != 10 || frame.at(57) == 0) {
+            std::cerr << "SimpleEngine did not render the enabled moving-head layer\n";
             return 1;
         }
         engine.apply_control_command(lightengine::TriggerCommand{lightengine::LiveTriggerId::next, 0.0});
@@ -339,8 +352,11 @@ int main() {
             return 1;
         }
         engine.apply_control_command(lightengine::SetLayerCommand{lightengine::LayerId::motion, true});
-        if (engine.state_json(now).find(R"("motion":false)") == std::string::npos) {
-            std::cerr << "SimpleEngine released the moving-head safety lock\n";
+        engine.apply_control_command(lightengine::SetGoboControlCommand{
+            true, "static", "gobo_3", false, false, 0.62});
+        const lightengine::DmxFrame gobo_frame = engine.render_frame(now);
+        if (engine.state_json(now).find(R"("motion":true)") == std::string::npos || gobo_frame.at(55) != 26) {
+            std::cerr << "SimpleEngine did not render the selected manual gobo\n";
             return 1;
         }
         const std::string state = engine.state_json(now);

@@ -5,8 +5,8 @@
   "kind": "moving_head",
   "channels": 11,
   "capabilities": {
-    "pan": { "channel": 1, "type": "position", "label": "Pan" },
-    "tilt": { "channel": 2, "type": "position", "label": "Tilt" },
+    "pan": { "channel": 1, "fine_channel": 2, "type": "position", "label": "Pan" },
+    "tilt": { "channel": 3, "fine_channel": 4, "type": "position", "label": "Tilt" },
     "color": {
       "channel": 5,
       "type": "wheel",
@@ -49,9 +49,11 @@
       },
       "notes": "Gobo base values are from the existing Python engine. Python used base + 64 for gobo shake/rotation looks and clamped the result to 64..127."
     },
-    "dimmer": { "channel": 9, "type": "intensity", "label": "Dimmer" },
-    "strobe": { "channel": 10, "type": "strobe", "label": "Strobe" },
-    "reset": { "channel": 11, "type": "maintenance", "label": "Reset" }
+    "shutter_strobe": { "channel": 7, "type": "strobe", "label": "Shutter / Strobe", "open": 10 },
+    "dimmer": { "channel": 8, "type": "intensity", "label": "Dimmer" },
+    "movement_speed": { "channel": 9, "type": "speed", "label": "Movement Speed" },
+    "reset": { "channel": 10, "type": "maintenance", "label": "Reset", "reset_min": 200, "reset_max": 209 },
+    "unknown": { "channel": 11, "type": "unused", "label": "Unknown / unused" }
   },
   "calibration": {
     "pan_min": 0.14,

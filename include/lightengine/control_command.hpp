@@ -105,6 +105,7 @@ struct ToggleMotionSceneCommand final {
 struct SetGoboControlCommand final {
     bool enabled{false};
     std::string mode{"beat_step"};
+    std::string selected_gobo{"open"};
     bool highpoint_only{false};
     bool shake_enabled{false};
     double shake_mood_threshold{0.62};
