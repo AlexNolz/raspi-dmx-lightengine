@@ -1,0 +1,106 @@
+# Show JSON DSL
+
+Ziel: Lichtshows sollen in JSON gebaut werden können, ohne C++ neu zu kompilieren.
+
+Die Grenze ist bewusst klar:
+
+- C++ implementiert sichere Bausteine wie `beat_pulse`, `chase`, `position_chase`.
+- JSON kombiniert diese Bausteine mit Parametern, Gruppen, Paletten und Presets.
+- JSON wird keine freie Programmiersprache. Keine Schleifen, kein beliebiger Code.
+
+## Dateien
+
+- `shows/default.json`: Show-Projekt, Patch, Presets, aktive Szenen-Sammlungen.
+- `shows/color_palettes.json`: zusammenpassende Farbpaletten und Preset-Palettengruppen.
+- `shows/rgb_scenes.json`: RGB-/LED-Bar-Szenen.
+- `shows/moving_head_scenes.json`: Moving-Head-Szenen.
+
+## Farbpaletten
+
+Eine Palette ist eine feste Sammlung zusammenpassender Farben:
+
+```json
+{
+  "id": "club_blue_amber",
+  "name": "Club Blue / Cyan / Amber",
+  "colors": [[0, 70, 255], [0, 210, 255], [255, 120, 20], [255, 30, 90]]
+}
+```
+
+Preset-Paletten definieren, welche Paletten zu einem Preset passen:
+
+```json
+{ "id": "club", "palettes": ["club_blue_amber", "club_teal_pink", "deep_blue"] }
+```
+
+Wenn eine Szene `"palette": "preset"` nutzt, wählt die Engine passend zum aktiven Preset eine Palette aus dieser Gruppe. Die Auswahl darf beat-/phrasenabhängig wechseln, damit Shows nicht statisch wirken.
+
+## RGB-Szenen
+
+```json
+{
+  "id": "rgb_chase",
+  "name": "Neon Chase",
+  "type": "chase",
+  "palette": "preset",
+  "speed": 1.15,
+  "intensity": 0.62
+}
+```
+
+Unterstützte RGB-Typen:
+
+- `static_glow`: ruhiger Grundlook
+- `beat_pulse`: Beat-Hit von der Mitte
+- `chase`: laufende Welle
+- `comet`: laufender Lichtpunkt mit Tail
+- `beat_spark`: kurze Beat-Sparks
+
+## Moving-Head-Szenen
+
+Moving-Head-Szenen sollen dieselbe Idee nutzen: JSON beschreibt Zielpositionen, Dimmer, Farbe, Gobo und Strobe-Verhalten.
+
+```json
+{
+  "id": "mh_cross_sweep",
+  "name": "Cross Sweep",
+  "type": "position_chase",
+  "fixtures": "moving_heads",
+  "palette": "preset",
+  "positions": [
+    { "pan": 70, "tilt": 95, "label": "left_front" },
+    { "pan": 186, "tilt": 95, "label": "right_front" }
+  ],
+  "motion": { "mode": "sine", "speed": 0.5, "spread": 0.25 },
+  "dimmer": { "mode": "constant", "value": 0.65 },
+  "color": { "mode": "palette_step", "every_beats": 8 },
+  "gobo": { "mode": "static", "value": 0 },
+  "strobe": { "mode": "off" }
+}
+```
+
+Geplante Moving-Head-Typen:
+
+- `position_pulse`: feste Position, Dimmer pulst auf Beat
+- `position_chase`: Fixtures laufen phasenversetzt durch Positionen
+- `beat_hits`: kurze Beat-Hits mit Farbe/Gobo-Wechsel
+- `fan`: Pan/Tilt-Fächer über mehrere Fixtures
+- `circle`: Kreis-/Acht-Bewegung, später mit Kalibrierung
+
+## Presets
+
+Presets wählen keine DMX-Kanäle direkt. Sie aktivieren Szenen:
+
+```json
+{
+  "id": "rave",
+  "effects": ["rgb_beat_pulse", "rgb_chase", "rgb_comet", "rgb_spark"],
+  "motion_scenes": ["mh_cross_sweep", "mh_rave_hits"]
+}
+```
+
+Damit bleibt die Abstraktion sauber:
+
+```text
+Preset -> Szenen -> Fixture-Abstraktion -> DMX Frame -> ArtNet
+```

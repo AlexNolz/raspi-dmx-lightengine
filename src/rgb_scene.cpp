@@ -7,6 +7,7 @@
 #include <iterator>
 #include <regex>
 #include <sstream>
+#include <unordered_set>
 #include <string_view>
 
 namespace lightengine {
@@ -164,17 +165,75 @@ std::optional<double> regex_number_field(const std::string& object, const std::s
     return value;
 }
 
+std::vector<std::string> regex_string_list_field(const std::string& object, const std::string& field) {
+    const std::regex list_pattern{"\"" + field + R"("\s*:\s*\[([^]]*)\])"};
+    std::smatch list_match;
+    if (!std::regex_search(object, list_match, list_pattern)) {
+        return {};
+    }
+
+    std::vector<std::string> values;
+    const std::string list = list_match.str(1);
+    const std::regex string_pattern{"\"([^\"]+)\""};
+    for (auto current = std::sregex_iterator{list.begin(), list.end(), string_pattern}; current != std::sregex_iterator{}; ++current) {
+        values.push_back(current->str(1));
+    }
+    return values;
+}
+
+std::vector<Rgb> regex_color_list_field(const std::string& object, const std::string& field) {
+    const std::string key = "\"" + field + "\"";
+    const std::size_t key_position = object.find(key);
+    if (key_position == std::string::npos) {
+        return {};
+    }
+
+    const std::size_t array_start = object.find('[', key_position + key.size());
+    if (array_start == std::string::npos) {
+        return {};
+    }
+
+    int depth = 0;
+    std::size_t array_end = std::string::npos;
+    for (std::size_t index = array_start; index < object.size(); ++index) {
+        if (object.at(index) == '[') {
+            ++depth;
+        } else if (object.at(index) == ']') {
+            --depth;
+            if (depth == 0) {
+                array_end = index;
+                break;
+            }
+        }
+    }
+    if (array_end == std::string::npos) {
+        return {};
+    }
+
+    std::vector<Rgb> colors;
+    const std::string list = object.substr(array_start, array_end - array_start + 1U);
+    const std::regex color_pattern{R"(\[\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})\s*\])"};
+    for (auto current = std::sregex_iterator{list.begin(), list.end(), color_pattern}; current != std::sregex_iterator{}; ++current) {
+        colors.push_back(Rgb{
+            static_cast<std::uint8_t>(std::min(255, std::stoi(current->str(1)))),
+            static_cast<std::uint8_t>(std::min(255, std::stoi(current->str(2)))),
+            static_cast<std::uint8_t>(std::min(255, std::stoi(current->str(3)))),
+        });
+    }
+    return colors;
+}
+
 double clamp_range(const double value, const double low, const double high) {
     return std::max(low, std::min(high, value));
 }
 
 std::vector<RgbSceneDefinition> default_scene_definitions() {
     return {
-        {"rgb_static", "Static Glow", "static_glow", "club", 0.65, 0.55},
-        {"rgb_beat_pulse", "Beat Pulse", "beat_pulse", "club", 1.0, 0.85},
-        {"rgb_chase", "Chase", "chase", "rave", 1.0, 0.7},
-        {"rgb_comet", "Comet", "comet", "deep_blue", 1.0, 0.75},
-        {"rgb_spark", "Beat Spark", "beat_spark", "rave", 1.0, 0.85},
+        {"rgb_static", "Static Glow", "static_glow", "preset", 0.65, 0.55},
+        {"rgb_beat_pulse", "Beat Pulse", "beat_pulse", "preset", 1.0, 0.85},
+        {"rgb_chase", "Chase", "chase", "preset", 1.0, 0.7},
+        {"rgb_comet", "Comet", "comet", "preset", 1.0, 0.75},
+        {"rgb_spark", "Beat Spark", "beat_spark", "preset", 1.0, 0.85},
         {"rgb_amber_glow", "Amber Glow", "static_glow", "amber", 0.45, 0.5},
     };
 }
@@ -183,11 +242,20 @@ std::vector<RgbSceneDefinition> default_scene_definitions() {
 
 RgbSceneMixer::RgbSceneMixer()
     : palettes_{
-          {"club", "Club Blue/Cyan/Amber", {Rgb{0, 70, 255}, Rgb{0, 210, 255}, Rgb{255, 120, 20}, Rgb{255, 30, 90}}},
-          {"rave", "Rave Neon", {Rgb{0, 255, 80}, Rgb{255, 0, 220}, Rgb{0, 170, 255}, Rgb{255, 230, 0}}},
+          {"club_blue_amber", "Club Blue / Cyan / Amber", {Rgb{0, 70, 255}, Rgb{0, 210, 255}, Rgb{255, 120, 20}, Rgb{255, 30, 90}}},
+          {"club_teal_pink", "Club Teal / Pink", {Rgb{0, 220, 180}, Rgb{255, 35, 130}, Rgb{20, 80, 255}, Rgb{255, 180, 30}}},
+          {"rave_neon", "Rave Neon", {Rgb{0, 255, 80}, Rgb{255, 0, 220}, Rgb{0, 170, 255}, Rgb{255, 230, 0}}},
+          {"rave_acid", "Rave Acid", {Rgb{180, 255, 0}, Rgb{0, 255, 255}, Rgb{255, 0, 80}, Rgb{80, 0, 255}}},
           {"rgb_hard", "Hard RGB", {Rgb{255, 0, 0}, Rgb{0, 255, 0}, Rgb{0, 0, 255}, Rgb{255, 255, 255}}},
           {"deep_blue", "Deep Blue", {Rgb{0, 20, 120}, Rgb{0, 120, 255}, Rgb{80, 0, 180}, Rgb{0, 255, 200}}},
           {"amber", "Warm Amber", {Rgb{255, 80, 0}, Rgb{255, 150, 20}, Rgb{255, 35, 10}, Rgb{255, 220, 90}}},
+      },
+      preset_palette_sets_{
+          {"lounge", {"amber"}},
+          {"club", {"club_blue_amber", "club_teal_pink", "deep_blue"}},
+          {"rave", {"rave_neon", "rave_acid", "rgb_hard"}},
+          {"game_show", {"deep_blue", "club_blue_amber"}},
+          {"rgb_hard", {"rgb_hard", "rave_acid"}},
       },
       scene_definitions_{default_scene_definitions()} {
     scenes_.push_back(std::make_unique<StaticGlowScene>());
@@ -210,19 +278,19 @@ const std::vector<RgbSceneDefinition>& RgbSceneMixer::scene_definitions() const 
 }
 
 const RgbPalette& RgbSceneMixer::palette_for_preset(const std::string_view preset) const {
-    if (preset == "rave") {
-        return palette_by_id("rave");
+    return palette_for_preset(preset, 0);
+}
+
+const RgbPalette& RgbSceneMixer::palette_for_preset(const std::string_view preset, const std::int64_t seed) const {
+    const auto found = std::find_if(preset_palette_sets_.begin(), preset_palette_sets_.end(), [&](const PresetPaletteSet& set) {
+        return set.preset_id == preset;
+    });
+    if (found == preset_palette_sets_.end() || found->palette_ids.empty()) {
+        return palette_by_id("club_blue_amber");
     }
-    if (preset == "rgb_hard") {
-        return palette_by_id("rgb_hard");
-    }
-    if (preset == "lounge") {
-        return palette_by_id("amber");
-    }
-    if (preset == "game_show") {
-        return palette_by_id("deep_blue");
-    }
-    return palette_by_id("club");
+
+    const auto index = static_cast<std::size_t>(std::abs(seed)) % found->palette_ids.size();
+    return palette_by_id(found->palette_ids.at(index));
 }
 
 const RgbPalette& RgbSceneMixer::palette_by_id(const std::string_view id) const {
@@ -233,6 +301,45 @@ const RgbPalette& RgbSceneMixer::palette_by_id(const std::string_view id) const 
         return *found;
     }
     return palettes_.front();
+}
+
+void RgbSceneMixer::load_palettes_from_file(const std::string& path) {
+    std::ifstream file{path};
+    if (!file) {
+        return;
+    }
+
+    const std::string text{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
+    const std::regex object_pattern{R"(\{[\s\S]*?"id"\s*:\s*"[^"]+"[\s\S]*?\})"};
+    std::vector<RgbPalette> loaded_palettes;
+    std::vector<PresetPaletteSet> loaded_sets;
+    std::unordered_set<std::string> palette_ids;
+    for (auto current = std::sregex_iterator{text.begin(), text.end(), object_pattern}; current != std::sregex_iterator{}; ++current) {
+        const std::string object = current->str();
+        const std::string id = regex_string_field(object, "id").value_or("");
+        if (id.empty()) {
+            continue;
+        }
+
+        std::vector<Rgb> colors = regex_color_list_field(object, "colors");
+        if (!colors.empty()) {
+            loaded_palettes.push_back(RgbPalette{id, regex_string_field(object, "name").value_or(id), std::move(colors)});
+            palette_ids.insert(id);
+            continue;
+        }
+
+        std::vector<std::string> palette_refs = regex_string_list_field(object, "palettes");
+        if (!palette_refs.empty()) {
+            loaded_sets.push_back(PresetPaletteSet{id, std::move(palette_refs)});
+        }
+    }
+
+    if (!loaded_palettes.empty()) {
+        palettes_ = std::move(loaded_palettes);
+    }
+    if (!loaded_sets.empty()) {
+        preset_palette_sets_ = std::move(loaded_sets);
+    }
 }
 
 std::string RgbSceneMixer::effects_json() const {
@@ -297,7 +404,10 @@ void RgbSceneMixer::render(
             RgbSceneContext scene_context = context;
             scene_context.master *= definition->intensity;
             scene_context.beat.beat *= definition->speed;
-            const RgbPalette& scene_palette = definition->palette.empty() ? palette : palette_by_id(definition->palette);
+            const auto palette_seed = definition->type == "static_glow" ? context.beat.position / 16 : context.beat.position / 8;
+            const RgbPalette& scene_palette = definition->palette.empty() || definition->palette == "preset"
+                ? palette_for_preset(palette.id, palette_seed + static_cast<std::int64_t>(definition_id.size()))
+                : palette_by_id(definition->palette);
             RgbWashBar layer{DmxAddress{1}, static_cast<std::uint8_t>(bar.size())};
             (*renderer)->render(layer, scene_context, scene_palette);
             for (std::size_t segment = 0; segment < bar.size(); ++segment) {

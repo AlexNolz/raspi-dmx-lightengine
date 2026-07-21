@@ -49,6 +49,7 @@ SimpleEngine::SimpleEngine(SimpleEngineConfig config)
       preview_(static_cast<std::size_t>(config_.segments_per_bar) * 2U),
       bar1_{DmxAddress{config_.bar1_start}, config_.segments_per_bar},
       bar2_{DmxAddress{config_.bar2_start}, config_.segments_per_bar} {
+    rgb_scenes_.load_palettes_from_file("shows/color_palettes.json");
     rgb_scenes_.load_scene_definitions_from_file("shows/rgb_scenes.json");
 }
 
@@ -154,7 +155,7 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
         clamp01(master_ * led_master_),
         static_cast<double>(mood_) / 100.0,
     };
-    const RgbPalette& palette = rgb_scenes_.palette_for_preset(preset_);
+    const RgbPalette& palette = rgb_scenes_.palette_for_preset(preset_, beat.position / 16);
     rgb_scenes_.render(bar1_, active_effects_, scene_context, palette);
     rgb_scenes_.render(bar2_, active_effects_, scene_context, palette);
     if (whiteout_held_ || strobe_out_held_) {

@@ -5,7 +5,7 @@
       "id": "rgb_static",
       "name": "Static Glow",
       "type": "static_glow",
-      "palette": "club",
+      "palette": "preset",
       "speed": 0.55,
       "intensity": 0.42
     },
@@ -13,7 +13,7 @@
       "id": "rgb_beat_pulse",
       "name": "Beat Pulse",
       "type": "beat_pulse",
-      "palette": "club",
+      "palette": "preset",
       "speed": 1.0,
       "intensity": 0.72
     },
@@ -21,7 +21,7 @@
       "id": "rgb_chase",
       "name": "Neon Chase",
       "type": "chase",
-      "palette": "rave",
+      "palette": "preset",
       "speed": 1.15,
       "intensity": 0.62
     },
@@ -29,7 +29,7 @@
       "id": "rgb_comet",
       "name": "Blue Comet",
       "type": "comet",
-      "palette": "deep_blue",
+      "palette": "preset",
       "speed": 0.95,
       "intensity": 0.68
     },
@@ -37,7 +37,7 @@
       "id": "rgb_spark",
       "name": "Beat Spark",
       "type": "beat_spark",
-      "palette": "rave",
+      "palette": "preset",
       "speed": 1.0,
       "intensity": 0.8
     },

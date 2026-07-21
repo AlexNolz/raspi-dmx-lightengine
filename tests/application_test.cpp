@@ -248,19 +248,23 @@ int main() {
 
     {
         lightengine::RgbSceneMixer mixer;
+        mixer.load_palettes_from_file("shows/color_palettes.json");
+        mixer.load_scene_definitions_from_file("shows/rgb_scenes.json");
         lightengine::RgbWashBar bar{lightengine::DmxAddress{1}, 8};
         const lightengine::RgbSceneContext context{
             lightengine::BeatSnapshot{16.0, 0.0, 16, 120.0, 1.0, true},
             1.0,
             0.6,
         };
-        mixer.render(bar, {"rgb_static", "rgb_beat_pulse", "rgb_comet"}, context, mixer.palette_by_id("club"));
+        mixer.render(bar, {"rgb_static", "rgb_beat_pulse", "rgb_comet"}, context, mixer.palette_for_preset("club"));
         bool has_output = false;
         for (std::size_t segment = 0; segment < bar.size(); ++segment) {
             const lightengine::Rgb color = bar.wash_color(segment);
             has_output = has_output || color.r != 0 || color.g != 0 || color.b != 0;
         }
-        if (!has_output || mixer.palette_for_preset("rave").id != "rave") {
+        const std::string rave_palette = mixer.palette_for_preset("rave").id;
+        if (!has_output || mixer.palette_by_id("club_blue_amber").colors.size() < 4 ||
+            (rave_palette != "rave_neon" && rave_palette != "rave_acid" && rave_palette != "rgb_hard")) {
             std::cerr << "RgbSceneMixer did not render scenes or select palettes\n";
             return 1;
         }

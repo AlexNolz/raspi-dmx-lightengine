@@ -1,0 +1,47 @@
+{
+  "schema": "lightengine.color_palettes.v1",
+  "palettes": [
+    {
+      "id": "club_blue_amber",
+      "name": "Club Blue / Cyan / Amber",
+      "colors": [[0, 70, 255], [0, 210, 255], [255, 120, 20], [255, 30, 90]]
+    },
+    {
+      "id": "club_teal_pink",
+      "name": "Club Teal / Pink",
+      "colors": [[0, 220, 180], [255, 35, 130], [20, 80, 255], [255, 180, 30]]
+    },
+    {
+      "id": "deep_blue",
+      "name": "Deep Blue",
+      "colors": [[0, 20, 120], [0, 120, 255], [80, 0, 180], [0, 255, 200]]
+    },
+    {
+      "id": "amber",
+      "name": "Warm Amber",
+      "colors": [[255, 80, 0], [255, 150, 20], [255, 35, 10], [255, 220, 90]]
+    },
+    {
+      "id": "rave_neon",
+      "name": "Rave Neon",
+      "colors": [[0, 255, 80], [255, 0, 220], [0, 170, 255], [255, 230, 0]]
+    },
+    {
+      "id": "rave_acid",
+      "name": "Rave Acid",
+      "colors": [[180, 255, 0], [0, 255, 255], [255, 0, 80], [80, 0, 255]]
+    },
+    {
+      "id": "rgb_hard",
+      "name": "Hard RGB",
+      "colors": [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 255]]
+    }
+  ],
+  "preset_palettes": [
+    { "id": "lounge", "palettes": ["amber"] },
+    { "id": "club", "palettes": ["club_blue_amber", "club_teal_pink", "deep_blue"] },
+    { "id": "rave", "palettes": ["rave_neon", "rave_acid", "rgb_hard"] },
+    { "id": "game_show", "palettes": ["deep_blue", "club_blue_amber"] },
+    { "id": "rgb_hard", "palettes": ["rgb_hard", "rave_acid"] }
+  ]
+}

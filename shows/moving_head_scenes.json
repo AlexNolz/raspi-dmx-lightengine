@@ -1,0 +1,51 @@
+{
+  "schema": "lightengine.moving_head_scenes.v1",
+  "scenes": [
+    {
+      "id": "mh_center_pulse",
+      "name": "Center Pulse",
+      "type": "position_pulse",
+      "fixtures": "moving_heads",
+      "palette": "preset",
+      "positions": [
+        { "pan": 128, "tilt": 96, "label": "center_front" }
+      ],
+      "dimmer": { "mode": "beat_pulse", "min": 0.15, "max": 1.0, "decay": 7.0 },
+      "color": { "mode": "palette_step", "every_beats": 16 },
+      "gobo": { "mode": "static", "value": 0 },
+      "strobe": { "mode": "off" }
+    },
+    {
+      "id": "mh_cross_sweep",
+      "name": "Cross Sweep",
+      "type": "position_chase",
+      "fixtures": "moving_heads",
+      "palette": "preset",
+      "positions": [
+        { "pan": 70, "tilt": 95, "label": "left_front" },
+        { "pan": 186, "tilt": 95, "label": "right_front" },
+        { "pan": 128, "tilt": 70, "label": "up_center" }
+      ],
+      "motion": { "mode": "sine", "speed": 0.5, "spread": 0.25 },
+      "dimmer": { "mode": "constant", "value": 0.65 },
+      "color": { "mode": "palette_step", "every_beats": 8 },
+      "gobo": { "mode": "static", "value": 0 },
+      "strobe": { "mode": "off" }
+    },
+    {
+      "id": "mh_rave_hits",
+      "name": "Rave Hits",
+      "type": "beat_hits",
+      "fixtures": "moving_heads",
+      "palette": "preset",
+      "positions": [
+        { "pan": 55, "tilt": 82, "label": "wide_left" },
+        { "pan": 201, "tilt": 82, "label": "wide_right" }
+      ],
+      "dimmer": { "mode": "beat_gate", "threshold": 0.25, "decay": 11.0 },
+      "color": { "mode": "palette_random", "every_beats": 4 },
+      "gobo": { "mode": "beat_step", "values": [0, 32, 64, 96] },
+      "strobe": { "mode": "beat_pulse", "armed_only": true }
+    }
+  ]
+}
