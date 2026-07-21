@@ -146,6 +146,7 @@ function render(state) {
 
   document.querySelectorAll("[data-motion-scene]").forEach((checkbox) => {
     checkbox.checked = (config.enabled_motion_scenes || []).includes(checkbox.dataset.motionScene);
+    checkbox.closest(".motion-toggle")?.classList.toggle("active", checkbox.checked);
   });
 
   if (!effectsBuilt) {
@@ -168,6 +169,7 @@ function render(state) {
 
   document.querySelectorAll("[data-effect]").forEach((checkbox) => {
     checkbox.checked = config.enabled_effects.includes(checkbox.dataset.effect);
+    checkbox.closest(".effect-toggle")?.classList.toggle("active", checkbox.checked);
   });
 
   document.querySelectorAll("[data-layer]").forEach((checkbox) => {

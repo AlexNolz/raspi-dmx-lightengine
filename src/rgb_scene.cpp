@@ -35,6 +35,14 @@ Rgb mix(const Rgb a, const Rgb b, const double amount) {
     };
 }
 
+Rgb add_saturating(const Rgb a, const Rgb b) {
+    return Rgb{
+        static_cast<std::uint8_t>(std::min(255, static_cast<int>(a.r) + static_cast<int>(b.r))),
+        static_cast<std::uint8_t>(std::min(255, static_cast<int>(a.g) + static_cast<int>(b.g))),
+        static_cast<std::uint8_t>(std::min(255, static_cast<int>(a.b) + static_cast<int>(b.b))),
+    };
+}
+
 Rgb palette_color(const RgbPalette& palette, const std::size_t index) {
     if (palette.colors.empty()) {
         return Rgb{255, 255, 255};
@@ -72,7 +80,7 @@ public:
         for (std::size_t segment = 0; segment < bar.size(); ++segment) {
             const double distance = std::abs(static_cast<double>(segment) - 3.5) / 3.5;
             const double center = 1.0 - clamp01(distance);
-            const Rgb base = mix(palette_color(palette, 0), palette_color(palette, 2), center);
+            const Rgb base = mix(palette_color(palette, 1), palette_color(palette, 2), center);
             bar.set_wash(segment, scale(base, context.master * (0.06 + hit * (0.45 + center * 0.35))));
         }
     }
@@ -88,7 +96,7 @@ public:
         for (std::size_t segment = 0; segment < bar.size(); ++segment) {
             const double wave = std::sin(context.beat.beat * 1.25 - static_cast<double>(segment) * 0.85) * 0.5 + 0.5;
             const double gate = std::pow(wave, 2.8);
-            bar.set_wash(segment, scale(palette_color(palette, segment), context.master * (0.03 + gate * 0.58)));
+            bar.set_wash(segment, scale(palette_color(palette, segment + 2U), context.master * (0.03 + gate * 0.58)));
         }
     }
 };
@@ -105,7 +113,7 @@ public:
             const double raw_distance = std::abs(static_cast<double>(segment) - head);
             const double wrapped_distance = std::min(raw_distance, static_cast<double>(bar.size()) - raw_distance);
             const double tail = std::exp(-wrapped_distance * 1.35);
-            bar.set_wash(segment, scale(palette_color(palette, static_cast<std::size_t>(context.beat.position / 4)), context.master * tail * 0.75));
+            bar.set_wash(segment, scale(palette_color(palette, static_cast<std::size_t>(context.beat.position / 4) + 3U), context.master * tail * 0.75));
         }
     }
 };
@@ -132,7 +140,7 @@ public:
 
 RgbSceneMixer::RgbSceneMixer()
     : palettes_{
-          {"club", "Club Magenta/Blue", {Rgb{255, 0, 130}, Rgb{40, 0, 255}, Rgb{0, 210, 255}, Rgb{190, 0, 255}}},
+          {"club", "Club Blue/Cyan/Amber", {Rgb{0, 70, 255}, Rgb{0, 210, 255}, Rgb{255, 120, 20}, Rgb{255, 30, 90}}},
           {"rave", "Rave Neon", {Rgb{0, 255, 80}, Rgb{255, 0, 220}, Rgb{0, 170, 255}, Rgb{255, 230, 0}}},
           {"rgb_hard", "Hard RGB", {Rgb{255, 0, 0}, Rgb{0, 255, 0}, Rgb{0, 0, 255}, Rgb{255, 255, 255}}},
           {"deep_blue", "Deep Blue", {Rgb{0, 20, 120}, Rgb{0, 120, 255}, Rgb{80, 0, 180}, Rgb{0, 255, 200}}},
@@ -160,6 +168,12 @@ const RgbPalette& RgbSceneMixer::palette_for_preset(const std::string_view prese
     if (preset == "rgb_hard") {
         return palette_by_id("rgb_hard");
     }
+    if (preset == "lounge") {
+        return palette_by_id("amber");
+    }
+    if (preset == "game_show") {
+        return palette_by_id("deep_blue");
+    }
     return palette_by_id("club");
 }
 
@@ -183,7 +197,11 @@ void RgbSceneMixer::render(
             return scene->id() == scene_id;
         });
         if (found != scenes_.end()) {
-            (*found)->render(bar, context, palette);
+            RgbWashBar layer{DmxAddress{1}, static_cast<std::uint8_t>(bar.size())};
+            (*found)->render(layer, context, palette);
+            for (std::size_t segment = 0; segment < bar.size(); ++segment) {
+                bar.set_wash(segment, add_saturating(bar.wash_color(segment), layer.wash_color(segment)));
+            }
         }
     }
 }

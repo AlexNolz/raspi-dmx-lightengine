@@ -191,7 +191,9 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
     std::ostringstream out;
     out << R"({"running":)" << json_bool(running_)
         << R"(,"blackout":)" << json_bool(blackout_ || blackout_held_)
-        << R"(,"active_effect":"pulse","active_effect_label":"Beat Pulse")"
+        << R"(,"active_effect":")" << (active_effects_.empty() ? std::string{"none"} : active_effects_.front())
+        << R"(","active_effect_label":")" << (active_effects_.empty() ? std::string{"Keine RGB Szene"} : std::string{"RGB Szenen aktiv"})
+        << R"(")"
         << R"(,"bpm":)" << beat.bpm
         << R"(,"beat_count":)" << static_cast<std::int64_t>(std::floor(beat.beat))
         << R"(,"beat_pos":)" << beat.position
@@ -236,7 +238,7 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
     out << R"(,"effects":{"rgb_static":"Static Glow","rgb_beat_pulse":"Beat Pulse","rgb_chase":"Chase","rgb_comet":"Comet","rgb_spark":"Beat Spark"})";
     out << R"(,"motion_modes":{"auto":"Auto","center_pulse":"Mitte Pulse","point_chase":"Punkt Chase","line_sweep":"Links/Rechts Sweep","depth_sweep":"Vorne/Hinten Sweep","cross_pairs":"2 Links / 2 Rechts","split_strobe":"Links/Rechts Strobe","x_cross":"X Cross","color_fan":"Color Fan","pair_random":"Paare Random"})";
     out << R"(,"motion_scenes":{"beat_drive":"Beat Drive","center_pulse":"Mitte Pulse","point_chase":"Punkt Chase","line_sweep":"Links/Rechts Sweep","depth_sweep":"Vorne/Hinten Sweep","cross_pairs":"2 Links / 2 Rechts","split_strobe":"Links/Rechts Strobe","x_cross":"X Cross","color_fan":"Color Fan","pair_random":"Paare Random"})";
-    out << R"(,"presets":["club","rave","rgb_hard","custom"],"show":{},"preview":[)";
+    out << R"(,"presets":["lounge","club","rave","game_show","rgb_hard","custom"],"show":{},"preview":[)";
     for (std::size_t index = 0; index < preview_.size(); ++index) {
         if (index != 0) {
             out << ',';
@@ -265,6 +267,14 @@ void SimpleEngine::apply_preset_locked(const std::string& preset) {
         mood_ = 78;
         active_effects_ = {"rgb_beat_pulse", "rgb_chase", "rgb_spark"};
         active_scenes_ = {"beat_drive", "gobo_chase", "side_pingpong", "split_strobe", "x_cross"};
+    } else if (preset == "lounge") {
+        mood_ = 35;
+        active_effects_ = {"rgb_static", "rgb_beat_pulse"};
+        active_scenes_ = {"beat_drive", "center_pulse"};
+    } else if (preset == "game_show") {
+        mood_ = 66;
+        active_effects_ = {"rgb_static", "rgb_chase", "rgb_spark"};
+        active_scenes_ = {"beat_drive", "cross_pairs", "line_sweep"};
     } else {
         mood_ = 58;
         active_effects_ = {"rgb_static", "rgb_beat_pulse", "rgb_comet"};
