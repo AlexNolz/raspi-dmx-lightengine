@@ -16,6 +16,7 @@ namespace lightengine {
 struct RgbPalette final {
     std::string id;
     std::string label;
+    std::vector<std::string> color_names;
     std::vector<Rgb> colors;
 };
 

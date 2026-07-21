@@ -23,7 +23,29 @@ Eine Palette ist eine feste Sammlung zusammenpassender Farben:
 {
   "id": "club_blue_amber",
   "name": "Club Blue / Cyan / Amber",
-  "colors": [[0, 70, 255], [0, 210, 255], [255, 120, 20], [255, 30, 90]]
+  "colors": ["blue", "cyan", "amber", "pink"]
+}
+```
+
+Paletten verwenden absichtlich Farbnamen, keine harten RGB-Werte. RGB-Bars lösen diese
+Namen auf RGB auf. Moving Heads lösen dieselben Namen über ihr Fixture-Farbrad auf.
+
+Beispiel ZKYMZL:
+
+```json
+"color": {
+  "channel": 5,
+  "type": "wheel",
+  "colors": {
+    "white": 3,
+    "red": 11,
+    "cyan": 18,
+    "amber": 25,
+    "blue": 70,
+    "yellow": 80,
+    "green": 90,
+    "magenta": 100
+  }
 }
 ```
 

@@ -45,7 +45,7 @@
       "id": "rgb_amber_glow",
       "name": "Amber Glow",
       "type": "static_glow",
-      "palette": "amber",
+      "palette": "amber_warm",
       "speed": 0.35,
       "intensity": 0.48
     }

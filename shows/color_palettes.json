@@ -4,41 +4,41 @@
     {
       "id": "club_blue_amber",
       "name": "Club Blue / Cyan / Amber",
-      "colors": [[0, 70, 255], [0, 210, 255], [255, 120, 20], [255, 30, 90]]
+      "colors": ["blue", "cyan", "amber", "pink"]
     },
     {
       "id": "club_teal_pink",
       "name": "Club Teal / Pink",
-      "colors": [[0, 220, 180], [255, 35, 130], [20, 80, 255], [255, 180, 30]]
+      "colors": ["teal", "pink", "blue", "yellow"]
     },
     {
       "id": "deep_blue",
       "name": "Deep Blue",
-      "colors": [[0, 20, 120], [0, 120, 255], [80, 0, 180], [0, 255, 200]]
+      "colors": ["blue", "cyan", "uv", "teal"]
     },
     {
-      "id": "amber",
+      "id": "amber_warm",
       "name": "Warm Amber",
-      "colors": [[255, 80, 0], [255, 150, 20], [255, 35, 10], [255, 220, 90]]
+      "colors": ["orange", "amber", "red", "yellow"]
     },
     {
       "id": "rave_neon",
       "name": "Rave Neon",
-      "colors": [[0, 255, 80], [255, 0, 220], [0, 170, 255], [255, 230, 0]]
+      "colors": ["green", "magenta", "cyan", "yellow"]
     },
     {
       "id": "rave_acid",
       "name": "Rave Acid",
-      "colors": [[180, 255, 0], [0, 255, 255], [255, 0, 80], [80, 0, 255]]
+      "colors": ["acid", "cyan", "red", "uv"]
     },
     {
       "id": "rgb_hard",
       "name": "Hard RGB",
-      "colors": [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 255]]
+      "colors": ["red", "green", "blue", "white"]
     }
   ],
   "preset_palettes": [
-    { "id": "lounge", "palettes": ["amber"] },
+    { "id": "lounge", "palettes": ["amber_warm"] },
     { "id": "club", "palettes": ["club_blue_amber", "club_teal_pink", "deep_blue"] },
     { "id": "rave", "palettes": ["rave_neon", "rave_acid", "rgb_hard"] },
     { "id": "game_show", "palettes": ["deep_blue", "club_blue_amber"] },

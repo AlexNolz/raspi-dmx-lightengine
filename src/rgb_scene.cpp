@@ -56,6 +56,62 @@ Rgb palette_color(const RgbPalette& palette, const std::size_t index) {
     return palette.colors.at(index % palette.colors.size());
 }
 
+std::optional<Rgb> named_color_rgb(const std::string& name) {
+    if (name == "black") {
+        return Rgb{0, 0, 0};
+    }
+    if (name == "white") {
+        return Rgb{255, 255, 255};
+    }
+    if (name == "red") {
+        return Rgb{255, 0, 0};
+    }
+    if (name == "green") {
+        return Rgb{0, 255, 0};
+    }
+    if (name == "blue") {
+        return Rgb{0, 0, 255};
+    }
+    if (name == "yellow") {
+        return Rgb{255, 220, 0};
+    }
+    if (name == "cyan") {
+        return Rgb{0, 220, 255};
+    }
+    if (name == "magenta") {
+        return Rgb{255, 0, 220};
+    }
+    if (name == "amber") {
+        return Rgb{255, 120, 0};
+    }
+    if (name == "orange") {
+        return Rgb{255, 80, 0};
+    }
+    if (name == "pink") {
+        return Rgb{255, 35, 130};
+    }
+    if (name == "teal") {
+        return Rgb{0, 220, 180};
+    }
+    if (name == "uv") {
+        return Rgb{180, 0, 255};
+    }
+    if (name == "acid") {
+        return Rgb{180, 255, 0};
+    }
+    return std::nullopt;
+}
+
+std::vector<Rgb> resolve_named_colors(const std::vector<std::string>& names) {
+    std::vector<Rgb> colors;
+    for (const std::string& name : names) {
+        if (const std::optional<Rgb> color = named_color_rgb(name)) {
+            colors.push_back(*color);
+        }
+    }
+    return colors;
+}
+
 double beat_hit(const BeatSnapshot& beat, const double sharpness) {
     return std::exp(-beat.phase * sharpness) * (0.35 + beat.strength * 0.65);
 }
@@ -234,7 +290,7 @@ std::vector<RgbSceneDefinition> default_scene_definitions() {
         {"rgb_chase", "Chase", "chase", "preset", 1.0, 0.7},
         {"rgb_comet", "Comet", "comet", "preset", 1.0, 0.75},
         {"rgb_spark", "Beat Spark", "beat_spark", "preset", 1.0, 0.85},
-        {"rgb_amber_glow", "Amber Glow", "static_glow", "amber", 0.45, 0.5},
+        {"rgb_amber_glow", "Amber Glow", "static_glow", "amber_warm", 0.45, 0.5},
     };
 }
 
@@ -242,16 +298,16 @@ std::vector<RgbSceneDefinition> default_scene_definitions() {
 
 RgbSceneMixer::RgbSceneMixer()
     : palettes_{
-          {"club_blue_amber", "Club Blue / Cyan / Amber", {Rgb{0, 70, 255}, Rgb{0, 210, 255}, Rgb{255, 120, 20}, Rgb{255, 30, 90}}},
-          {"club_teal_pink", "Club Teal / Pink", {Rgb{0, 220, 180}, Rgb{255, 35, 130}, Rgb{20, 80, 255}, Rgb{255, 180, 30}}},
-          {"rave_neon", "Rave Neon", {Rgb{0, 255, 80}, Rgb{255, 0, 220}, Rgb{0, 170, 255}, Rgb{255, 230, 0}}},
-          {"rave_acid", "Rave Acid", {Rgb{180, 255, 0}, Rgb{0, 255, 255}, Rgb{255, 0, 80}, Rgb{80, 0, 255}}},
-          {"rgb_hard", "Hard RGB", {Rgb{255, 0, 0}, Rgb{0, 255, 0}, Rgb{0, 0, 255}, Rgb{255, 255, 255}}},
-          {"deep_blue", "Deep Blue", {Rgb{0, 20, 120}, Rgb{0, 120, 255}, Rgb{80, 0, 180}, Rgb{0, 255, 200}}},
-          {"amber", "Warm Amber", {Rgb{255, 80, 0}, Rgb{255, 150, 20}, Rgb{255, 35, 10}, Rgb{255, 220, 90}}},
+          {"club_blue_amber", "Club Blue / Cyan / Amber", {"blue", "cyan", "amber", "pink"}, resolve_named_colors({"blue", "cyan", "amber", "pink"})},
+          {"club_teal_pink", "Club Teal / Pink", {"teal", "pink", "blue", "yellow"}, resolve_named_colors({"teal", "pink", "blue", "yellow"})},
+          {"rave_neon", "Rave Neon", {"green", "magenta", "cyan", "yellow"}, resolve_named_colors({"green", "magenta", "cyan", "yellow"})},
+          {"rave_acid", "Rave Acid", {"acid", "cyan", "red", "uv"}, resolve_named_colors({"acid", "cyan", "red", "uv"})},
+          {"rgb_hard", "Hard RGB", {"red", "green", "blue", "white"}, resolve_named_colors({"red", "green", "blue", "white"})},
+          {"deep_blue", "Deep Blue", {"blue", "cyan", "uv", "teal"}, resolve_named_colors({"blue", "cyan", "uv", "teal"})},
+          {"amber_warm", "Warm Amber", {"orange", "amber", "red", "yellow"}, resolve_named_colors({"orange", "amber", "red", "yellow"})},
       },
       preset_palette_sets_{
-          {"lounge", {"amber"}},
+          {"lounge", {"amber_warm"}},
           {"club", {"club_blue_amber", "club_teal_pink", "deep_blue"}},
           {"rave", {"rave_neon", "rave_acid", "rgb_hard"}},
           {"game_show", {"deep_blue", "club_blue_amber"}},
@@ -323,7 +379,15 @@ void RgbSceneMixer::load_palettes_from_file(const std::string& path) {
 
         std::vector<Rgb> colors = regex_color_list_field(object, "colors");
         if (!colors.empty()) {
-            loaded_palettes.push_back(RgbPalette{id, regex_string_field(object, "name").value_or(id), std::move(colors)});
+            loaded_palettes.push_back(RgbPalette{id, regex_string_field(object, "name").value_or(id), {}, std::move(colors)});
+            palette_ids.insert(id);
+            continue;
+        }
+
+        std::vector<std::string> color_names = regex_string_list_field(object, "colors");
+        colors = resolve_named_colors(color_names);
+        if (!colors.empty()) {
+            loaded_palettes.push_back(RgbPalette{id, regex_string_field(object, "name").value_or(id), std::move(color_names), std::move(colors)});
             palette_ids.insert(id);
             continue;
         }

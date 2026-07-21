@@ -7,7 +7,26 @@
   "capabilities": {
     "pan": { "channel": 1, "type": "position", "label": "Pan" },
     "tilt": { "channel": 2, "type": "position", "label": "Tilt" },
-    "color": { "channel": 5, "type": "wheel", "label": "Color Wheel" },
+    "color": {
+      "channel": 5,
+      "type": "wheel",
+      "label": "Color Wheel",
+      "colors": {
+        "white": 3,
+        "red": 11,
+        "cyan": 18,
+        "teal": 18,
+        "amber": 25,
+        "orange": 25,
+        "blue": 70,
+        "yellow": 80,
+        "acid": 80,
+        "green": 90,
+        "uv": 100,
+        "magenta": 100,
+        "pink": 100
+      }
+    },
     "gobo": { "channel": 6, "type": "wheel", "label": "Gobo Wheel" },
     "dimmer": { "channel": 9, "type": "intensity", "label": "Dimmer" },
     "strobe": { "channel": 10, "type": "strobe", "label": "Strobe" },
