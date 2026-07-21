@@ -3,6 +3,7 @@
 #include "lightengine/engine_input.hpp"
 #include "lightengine/fixture_runtime.hpp"
 #include "lightengine/os2l_event.hpp"
+#include "lightengine/motion_scene.hpp"
 #include "lightengine/project.hpp"
 #include "lightengine/rgb_scene.hpp"
 #include "lightengine/simple_engine.hpp"
@@ -323,13 +324,44 @@ int main() {
             std::cerr << "RgbSceneMixer did not render scenes or select palettes\n";
             return 1;
         }
+        for (const lightengine::RgbSceneDefinition& definition : mixer.scene_definitions()) {
+            lightengine::RgbWashBar scene_bar{lightengine::DmxAddress{1}, 8};
+            mixer.render(scene_bar, {definition.id}, context, mixer.palette_for_preset("club"));
+            bool scene_has_output = false;
+            for (std::size_t segment = 0; segment < scene_bar.size(); ++segment) {
+                const lightengine::Rgb color = scene_bar.wash_color(segment);
+                scene_has_output = scene_has_output || color.r != 0 || color.g != 0 || color.b != 0;
+            }
+            if (!scene_has_output) {
+                std::cerr << "RGB scene has no renderer or output: " << definition.id << '\n';
+                return 1;
+            }
+        }
+    }
+
+    {
+        lightengine::MotionSceneLibrary motions;
+        motions.load_from_file("shows/moving_head_scenes.json");
+        const lightengine::BeatSnapshot beat{16.0, 0.0, 16, 120.0, 1.0, true};
+        if (motions.scenes().size() < 20U || motions.find("pair_random") == nullptr) {
+            std::cerr << "Moving-head JSON scene library is incomplete\n";
+            return 1;
+        }
+        for (const lightengine::MotionSceneDefinition& scene : motions.scenes()) {
+            const lightengine::MotionTarget target = motions.evaluate(scene, 2U, 4U, beat, 0.7, 42U);
+            if (target.x < 0.0 || target.x > 1.0 || target.y < 0.0 || target.y > 1.0 ||
+                target.dimmer_scale < 0.0 || target.dimmer_scale > 1.0) {
+                std::cerr << "Moving-head scene generated an invalid target: " << scene.id << '\n';
+                return 1;
+            }
+        }
     }
 
     {
         lightengine::SimpleEngine engine{lightengine::SimpleEngineConfig{}};
         const auto now = std::chrono::steady_clock::now();
         const lightengine::DmxFrame stopped_frame = engine.render_frame(now);
-        if (engine.output_active()) {
+        if (engine.output_active(now)) {
             std::cerr << "SimpleEngine enabled ArtNet output before Start\n";
             return 1;
         }
@@ -339,7 +371,7 @@ int main() {
             return 1;
         }
         engine.apply_control_command(lightengine::SetRunningCommand{true});
-        if (!engine.output_active()) {
+        if (!engine.output_active(now)) {
             std::cerr << "SimpleEngine did not enable ArtNet output after Start\n";
             return 1;
         }
@@ -349,18 +381,18 @@ int main() {
             std::cerr << "SimpleEngine did not render LED bar DMX values while running\n";
             return 1;
         }
-        if (frame.at(50) != 85 || frame.at(52) != 179 || frame.at(56) != 10 || frame.at(57) == 0) {
+        if (frame.at(50) == 0 || frame.at(52) == 0 || frame.at(56) != 10 || frame.at(57) == 0) {
             std::cerr << "SimpleEngine did not render the enabled moving-head layer\n";
             return 1;
         }
         engine.apply_control_command(lightengine::TriggerCommand{lightengine::LiveTriggerId::next, 0.0});
-        if (engine.state_json(now).find(R"("active_effect":"rgb_beat_pulse")") == std::string::npos) {
+        if (engine.state_json(now).find(R"("active_effect":"ball")") == std::string::npos) {
             std::cerr << "SimpleEngine Next Look did not select the next enabled RGB scene\n";
             return 1;
         }
         engine.apply_control_command(lightengine::ApplyPresetCommand{"custom"});
         if (engine.state_json(now).find(R"("preset":"custom")") == std::string::npos ||
-            engine.state_json(now).find(R"("active_effect":"rgb_beat_pulse")") == std::string::npos) {
+            engine.state_json(now).find(R"("active_effect":"ball")") == std::string::npos) {
             std::cerr << "SimpleEngine Custom preset unexpectedly replaced the current show settings\n";
             return 1;
         }
@@ -379,6 +411,7 @@ int main() {
             std::cerr << "SimpleEngine did not render the armed strobe fixture\n";
             return 1;
         }
+        engine.apply_control_command(lightengine::SetHoldTriggerCommand{lightengine::LiveTriggerId::strobe_out, false});
         engine.apply_control_command(lightengine::SetLayerCommand{lightengine::LayerId::motion, true});
         engine.apply_control_command(lightengine::SetGoboControlCommand{
             true, "static", "cloverleaf", false, false, 0.62});
@@ -403,6 +436,31 @@ int main() {
         if (endpoint.host != "192.168.137.2" || endpoint.universe.value() != 0 ||
             engine.state_json(now).find(R"("artnet_host":"192.168.137.2")") == std::string::npos) {
             std::cerr << "SimpleEngine did not apply ArtNet target changes\n";
+            return 1;
+        }
+        const std::uint8_t last_pan = engine.render_frame(now).at(50);
+        const std::uint8_t last_tilt = engine.render_frame(now).at(52);
+        engine.apply_control_command(lightengine::SetRunningCommand{false});
+        const auto stopping = std::chrono::steady_clock::now();
+        const lightengine::DmxFrame reset_frame = engine.render_frame(stopping);
+        if (!engine.output_active(stopping) || reset_frame.at(50) != last_pan || reset_frame.at(52) != last_tilt ||
+            reset_frame.at(56) != 0 || reset_frame.at(57) != 0 || reset_frame.at(59) != 204) {
+            std::cerr << "SimpleEngine did not hold a safe reset/calibration frame after Stop\n";
+            return 1;
+        }
+        const auto reset_finished = stopping + std::chrono::seconds{7};
+        if (engine.output_active(reset_finished) || engine.render_frame(reset_finished).at(59) != 0) {
+            std::cerr << "SimpleEngine did not finish moving-head calibration after its hold interval\n";
+            return 1;
+        }
+    }
+
+    {
+        const lightengine::ShowProject loaded = lightengine::load_show_project_from_file("shows/default.json");
+        if (loaded.id != "default" || loaded.patch.size() != 7U || loaded.presets.size() != 5U ||
+            loaded.presets.at(1).id != "club" || loaded.presets.at(1).effects.size() < 10U ||
+            loaded.presets.at(1).motion_scenes.size() < 8U) {
+            std::cerr << "Show project loader did not load patch and preset scene collections\n";
             return 1;
         }
     }

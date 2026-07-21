@@ -32,6 +32,7 @@ target_sources(
         src/beat_clock.cpp
         src/control_command.cpp
         src/fixture_runtime.cpp
+        src/motion_scene.cpp
         src/rgb_scene.cpp
         src/simple_engine.cpp
         src/os2l_event.cpp
@@ -45,6 +46,7 @@ target_sources(
         include/lightengine/dmx.hpp
         include/lightengine/engine_input.hpp
         include/lightengine/fixture_runtime.hpp
+        include/lightengine/motion_scene.hpp
         include/lightengine/simple_engine.hpp
         include/lightengine/os2l_event.hpp
         include/lightengine/os2l_receiver.hpp

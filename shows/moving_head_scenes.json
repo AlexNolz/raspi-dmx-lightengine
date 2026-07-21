@@ -1,55 +1,35 @@
 {
-  "schema": "lightengine.moving_head_scenes.v1",
+  "schema": "lightengine.moving_head_scenes.v2",
+  "description": "Normalized floor targets. C++ converts x/y through the calibration in the fixture profile.",
   "scenes": [
-    {
-      "id": "mh_center_pulse",
-      "name": "Center Pulse",
-      "type": "position_pulse",
-      "fixtures": "moving_heads",
-      "palette": "preset",
-      "positions": [
-        { "pan": 85, "tilt": 179, "label": "center_front" }
-      ],
-      "dimmer": { "mode": "beat_pulse", "min": 0.15, "max": 1.0, "decay": 7.0 },
-      "color": { "mode": "palette_step", "every_beats": 16 },
-      "gobo": { "mode": "static", "name": "open" },
-      "strobe": { "mode": "off" }
-    },
-    {
-      "id": "mh_cross_sweep",
-      "name": "Cross Sweep",
-      "type": "position_chase",
-      "fixtures": "moving_heads",
-      "palette": "preset",
-      "positions": [
-        { "pan": 45, "tilt": 179, "label": "left_front" },
-        { "pan": 125, "tilt": 179, "label": "right_front" },
-        { "pan": 85, "tilt": 165, "label": "up_center" }
-      ],
-      "motion": { "mode": "sine", "speed": 0.5, "spread": 0.25 },
-      "dimmer": { "mode": "constant", "value": 0.65 },
-      "color": { "mode": "palette_step", "every_beats": 8 },
-      "gobo": { "mode": "static", "name": "open" },
-      "strobe": { "mode": "off" }
-    },
-    {
-      "id": "mh_rave_hits",
-      "name": "Rave Hits",
-      "type": "beat_hits",
-      "fixtures": "moving_heads",
-      "palette": "preset",
-      "positions": [
-        { "pan": 45, "tilt": 165, "label": "wide_left" },
-        { "pan": 125, "tilt": 165, "label": "wide_right" }
-      ],
-      "dimmer": { "mode": "beat_gate", "threshold": 0.25, "decay": 11.0 },
-      "color": { "mode": "palette_random", "every_beats": 4 },
-      "gobo": {
-        "mode": "beat_step",
-        "names": ["open", "spiral", "octopus", "cloverleaf", "flower_cluster", "ring_swirl", "broken_squares", "dot_grid"],
-        "shake_when_mood_above": 0.62
-      },
-      "strobe": { "mode": "beat_pulse", "armed_only": true }
-    }
+    { "id": "center", "name": "Mitte", "type": "fixed", "points": [[0.50, 0.65]], "dimmer_min": 0.72, "dimmer_max": 0.72 },
+    { "id": "front", "name": "Vorne", "type": "fixed", "points": [[0.50, 0.95]], "dimmer_min": 0.72, "dimmer_max": 0.72 },
+    { "id": "back", "name": "Hinten", "type": "fixed", "points": [[0.50, 0.29]], "dimmer_min": 0.72, "dimmer_max": 0.72 },
+    { "id": "left", "name": "Links", "type": "fixed", "points": [[0.18, 0.66]], "dimmer_min": 0.72, "dimmer_max": 0.72 },
+    { "id": "right", "name": "Rechts", "type": "fixed", "points": [[0.82, 0.66]], "dimmer_min": 0.72, "dimmer_max": 0.72 },
+
+    { "id": "center_pulse", "name": "Mitte Pulse", "type": "fixed", "points": [[0.50, 0.65]], "dimmer_min": 0.30, "dimmer_max": 1.0, "decay": 7.0 },
+    { "id": "point_chase", "name": "Punkt Chase", "type": "point_chase", "points": [[0.50,0.65],[0.22,0.95],[0.78,0.95],[0.22,0.35],[0.78,0.35]], "step_low": 8, "step_high": 3, "dimmer_min": 0.38, "dimmer_max": 1.0, "decay": 5.5 },
+    { "id": "line_sweep", "name": "Links/Rechts Sweep", "type": "sine_pan", "points": [[0.50,0.65]], "speed_low": 0.28, "speed_high": 0.84, "x_amount": 0.36, "y_amount": 0.13, "dimmer_min": 0.55, "dimmer_max": 1.0, "decay": 5.2 },
+    { "id": "depth_sweep", "name": "Vorne/Hinten Sweep", "type": "sine_depth", "points": [[0.35,0.65],[0.65,0.65]], "speed_low": 0.18, "speed_high": 0.56, "y_amount": 0.36, "dimmer_min": 0.58, "dimmer_max": 0.96, "decay": 4.8 },
+    { "id": "cross_pairs", "name": "2 Links / 2 Rechts", "type": "pair_swap", "points": [[0.24,0.59],[0.76,0.75]], "step_low": 8, "step_high": 4, "dimmer_min": 0.30, "dimmer_max": 1.0, "decay": 5.0 },
+    { "id": "split_strobe", "name": "Links/Rechts Strobe", "type": "alternating_pairs", "points": [[0.18,0.66],[0.82,0.66]], "dimmer_min": 0.06, "dimmer_max": 1.0 },
+    { "id": "corner_swap", "name": "Ecken Wechsel", "type": "indexed_points", "points": [[0.22,0.95],[0.78,0.95],[0.22,0.35],[0.78,0.35]], "step_low": 8, "step_high": 4, "dimmer_min": 0.55, "dimmer_max": 1.0, "decay": 5.5 },
+    { "id": "gobo_chase", "name": "Gobo Chase", "type": "point_chase", "points": [[0.22,0.35],[0.50,0.65],[0.78,0.95],[0.22,0.95],[0.50,0.65],[0.78,0.35]], "step_low": 6, "step_high": 3, "dimmer_min": 0.35, "dimmer_max": 1.0 },
+    { "id": "side_pingpong", "name": "Side Ping Pong", "type": "side_pingpong", "points": [[0.18,0.66],[0.82,0.66]], "step_low": 4, "step_high": 2, "dimmer_min": 0.28, "dimmer_max": 1.0 },
+    { "id": "x_cross", "name": "X Cross", "type": "indexed_points", "points": [[0.22,0.95],[0.78,0.95],[0.78,0.35],[0.22,0.35]], "step_low": 8, "step_high": 4, "dimmer_min": 0.50, "dimmer_max": 1.0, "decay": 4.8 },
+    { "id": "color_fan", "name": "Color Fan", "type": "fan", "points": [[0.16,0.66],[0.38,0.66],[0.62,0.66],[0.84,0.66]], "speed_low": 0.10, "speed_high": 0.28, "y_amount": 0.18, "dimmer_min": 0.55, "dimmer_max": 0.95, "decay": 4.0 },
+    { "id": "pair_orbit", "name": "Pair Orbit", "type": "orbit", "speed_low": 0.18, "speed_high": 0.46, "x_amount": 0.30, "y_amount": 0.25, "dimmer_min": 0.45, "dimmer_max": 0.96, "decay": 4.5 },
+    { "id": "all_random", "name": "Alle Random", "type": "random", "grouping": "fixture", "points": [[0.50,0.65],[0.50,0.95],[0.50,0.29],[0.18,0.66],[0.82,0.66],[0.22,0.95],[0.78,0.95],[0.22,0.35],[0.78,0.35]], "step_low": 8, "step_high": 3, "dimmer_min": 0.28, "dimmer_max": 1.0 },
+    { "id": "pair_random", "name": "Paare Random", "type": "random", "grouping": "pair", "points": [[0.50,0.65],[0.50,0.95],[0.50,0.29],[0.18,0.66],[0.82,0.66],[0.22,0.95],[0.78,0.95],[0.22,0.35],[0.78,0.35]], "step_low": 8, "step_high": 3, "dimmer_min": 0.36, "dimmer_max": 1.0 },
+    { "id": "duo_random", "name": "2 Gemeinsam + 2 Random", "type": "random", "grouping": "pair", "points": [[0.50,0.65],[0.50,0.95],[0.50,0.29],[0.18,0.66],[0.82,0.66],[0.22,0.95],[0.78,0.95],[0.22,0.35],[0.78,0.35]], "step_low": 12, "step_high": 5, "dimmer_min": 0.34, "dimmer_max": 1.0 },
+
+    { "id": "standby_sweep", "name": "Standby Sweep", "type": "sine_pan", "points": [[0.50,0.64]], "speed_low": 0.10, "speed_high": 0.10, "x_amount": 0.29, "y_amount": 0.15, "dimmer_min": 0.36, "dimmer_max": 0.36 },
+    { "id": "standby_depth", "name": "Standby Depth", "type": "sine_depth", "points": [[0.34,0.64],[0.66,0.64]], "speed_low": 0.08, "speed_high": 0.08, "y_amount": 0.28, "dimmer_min": 0.36, "dimmer_max": 0.36 },
+    { "id": "standby_orbit", "name": "Standby Orbit", "type": "orbit", "speed_low": 0.09, "speed_high": 0.09, "x_amount": 0.23, "y_amount": 0.17, "dimmer_min": 0.36, "dimmer_max": 0.36 },
+
+    { "id": "mh_center_pulse", "name": "MH Center Pulse (Legacy)", "type": "fixed", "points": [[0.50,0.65]], "dimmer_min": 0.30, "dimmer_max": 1.0, "decay": 7.0 },
+    { "id": "mh_cross_sweep", "name": "MH Cross Sweep (Legacy)", "type": "sine_pan", "points": [[0.50,0.65]], "speed_low": 0.28, "speed_high": 0.84, "x_amount": 0.36, "y_amount": 0.13, "dimmer_min": 0.55, "dimmer_max": 1.0 },
+    { "id": "mh_rave_hits", "name": "MH Rave Hits (Legacy)", "type": "alternating_pairs", "points": [[0.18,0.66],[0.82,0.66]], "dimmer_min": 0.06, "dimmer_max": 1.0 }
   ]
 }

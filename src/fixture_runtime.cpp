@@ -81,6 +81,12 @@ std::uint8_t integer_field(const std::string& object, const std::string& key, co
     return static_cast<std::uint8_t>(std::min(255, std::stoi(match[1].str())));
 }
 
+double number_field(const std::string& object, const std::string& key, const double fallback) {
+    const std::regex field_pattern{'"' + key + R"json("\s*:\s*(-?[0-9]+(?:\.[0-9]+)?))json"};
+    std::smatch match;
+    return std::regex_search(object, match, field_pattern) ? std::stod(match[1].str()) : fallback;
+}
+
 std::optional<std::uint8_t> wheel_value(const std::vector<FixtureWheelSlot>& slots, const std::string& id) {
     const auto item = std::find_if(slots.begin(), slots.end(), [&](const FixtureWheelSlot& slot) { return slot.id == id; });
     return item == slots.end() ? std::nullopt : std::optional<std::uint8_t>{item->value};
@@ -169,6 +175,16 @@ Zkymzl11Profile Zkymzl11Profile::load_from_file(const std::string& path) {
     profile.color_test_max = integer_field(manual_test, "max", 127);
     profile.color_test_step = std::max<std::uint8_t>(1, integer_field(manual_test, "step", 1));
     profile.color_test_default = integer_field(manual_test, "default", 8);
+    const std::string calibration = object_for_key(text, "calibration");
+    profile.pan_min = number_field(calibration, "pan_min", profile.pan_min);
+    profile.pan_max = number_field(calibration, "pan_max", profile.pan_max);
+    profile.pan_center = number_field(calibration, "pan_center", profile.pan_center);
+    profile.pan_width = number_field(calibration, "pan_width", profile.pan_width);
+    profile.tilt_min = number_field(calibration, "tilt_min", profile.tilt_min);
+    profile.tilt_max = number_field(calibration, "tilt_max", profile.tilt_max);
+    const std::string reset = object_for_key(object_for_key(text, "capabilities"), "reset");
+    profile.reset_value = integer_field(reset, "value", profile.reset_value);
+    profile.reset_hold_seconds = number_field(reset, "hold_seconds", profile.reset_hold_seconds);
     if (profile.colors.empty() || profile.gobos.empty()) {
         throw std::runtime_error{"moving-head fixture profile has no color or gobo wheel slots"};
     }

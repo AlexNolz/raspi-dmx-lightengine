@@ -66,5 +66,6 @@ struct ShowProject final {
 
 void validate_fixture_definition(const FixtureDefinition& definition);
 void validate_show_project(const ShowProject& project, const std::vector<FixtureDefinition>& definitions);
+[[nodiscard]] ShowProject load_show_project_from_file(const std::string& path);
 
 }  // namespace lightengine

@@ -306,7 +306,7 @@ int main(int argc, char** argv) {
                             std::cout << "ArtNet target changed to " << active_endpoint.host
                                       << " universe " << active_endpoint.universe.value() << '\n';
                         }
-                        const bool output_active = engine.output_active();
+                        const bool output_active = engine.output_active(started);
                         if (output_active || was_output_active) {
                             artnet.send(engine.render_frame(started));
                             engine.mark_artnet_packet_sent();

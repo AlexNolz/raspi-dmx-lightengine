@@ -99,7 +99,15 @@
     "shutter_strobe": { "channel": 7, "type": "strobe", "label": "Shutter / Strobe", "open": 10 },
     "dimmer": { "channel": 8, "type": "intensity", "label": "Dimmer" },
     "movement_speed": { "channel": 9, "type": "speed", "label": "Movement Speed" },
-    "reset": { "channel": 10, "type": "maintenance", "label": "Reset", "reset_min": 200, "reset_max": 209 },
+    "reset": {
+      "channel": 10,
+      "type": "maintenance",
+      "label": "Reset / Kalibrierung",
+      "reset_min": 200,
+      "reset_max": 209,
+      "value": 204,
+      "hold_seconds": 6.0
+    },
     "unknown": { "channel": 11, "type": "unused", "label": "Unknown / unused" }
   },
   "calibration": {

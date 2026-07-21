@@ -9,6 +9,7 @@
 #include <sstream>
 #include <unordered_set>
 #include <string_view>
+#include <utility>
 
 namespace lightengine {
 
@@ -115,6 +116,113 @@ std::vector<Rgb> resolve_named_colors(const std::vector<std::string>& names) {
 double beat_hit(const BeatSnapshot& beat, const double sharpness) {
     return std::exp(-beat.phase * sharpness) * (0.35 + beat.strength * 0.65);
 }
+
+Rgb rainbow_color(double hue) {
+    hue -= std::floor(hue);
+    const double sector = hue * 6.0;
+    const int index = static_cast<int>(std::floor(sector));
+    const double fraction = sector - std::floor(sector);
+    const double falling = 1.0 - fraction;
+    switch (index % 6) {
+        case 0: return Rgb{255, to_dmx(fraction), 0};
+        case 1: return Rgb{to_dmx(falling), 255, 0};
+        case 2: return Rgb{0, 255, to_dmx(fraction)};
+        case 3: return Rgb{0, to_dmx(falling), 255};
+        case 4: return Rgb{to_dmx(fraction), 0, 255};
+        default: return Rgb{255, 0, to_dmx(falling)};
+    }
+}
+
+class PatternScene final : public RgbScene {
+public:
+    explicit PatternScene(std::string scene_id) : scene_id_{std::move(scene_id)} {}
+
+    [[nodiscard]] std::string_view id() const override {
+        return scene_id_;
+    }
+
+    void render(RgbWashBar& bar, const RgbSceneContext& context, const RgbPalette& palette) const override {
+        const std::size_t count = std::max<std::size_t>(1U, bar.size());
+        const std::size_t step = static_cast<std::size_t>(std::max<std::int64_t>(0, context.beat.position));
+        const double hit = beat_hit(context.beat, 9.0);
+        for (std::size_t segment = 0; segment < bar.size(); ++segment) {
+            Rgb color{};
+            double level = 1.0;
+            if (scene_id_ == "ball") {
+                const double position = (std::sin(context.beat.beat * 0.72) + 1.0) * 0.5 * static_cast<double>(count - 1U);
+                level = 0.06 + std::exp(-std::abs(static_cast<double>(segment) - position) * 1.15) * 0.90;
+                color = palette_color(palette, step / 4U);
+            } else if (scene_id_ == "pair_swap") {
+                const bool alternate = ((segment / 2U) + step / 2U) % 2U != 0U;
+                color = palette_color(palette, alternate ? 1U : 0U);
+                level = 0.20 + hit * (alternate ? 0.75 : 0.46);
+            } else if (scene_id_ == "rainbow") {
+                color = rainbow_color(static_cast<double>(segment) / static_cast<double>(count) + context.beat.beat * 0.035);
+                level = 0.42 + context.mood * 0.45;
+            } else if (scene_id_ == "scanner") {
+                const double span = static_cast<double>(std::max<std::size_t>(1U, count * 2U - 2U));
+                double position = std::fmod(context.beat.beat * 1.1, span);
+                if (position > static_cast<double>(count - 1U)) {
+                    position = span - position;
+                }
+                level = 0.04 + std::exp(-std::abs(static_cast<double>(segment) - position) * 1.5) * 0.92;
+                color = palette_color(palette, step / 4U);
+            } else if (scene_id_ == "sparkle") {
+                const std::size_t hash = segment * 37U + step * 101U;
+                const bool active = hash % 11U < (context.mood > 0.65 ? 3U : 2U);
+                color = palette_color(palette, hash);
+                level = active ? (0.35 + hit * 0.65) : 0.025;
+            } else if (scene_id_ == "split") {
+                const bool left = segment < count / 2U;
+                color = palette_color(palette, left ? step / 4U : step / 4U + 1U);
+                level = 0.18 + hit * (left == (step % 2U == 0U) ? 0.82 : 0.34);
+            } else if (scene_id_ == "blocks") {
+                color = palette_color(palette, segment / 2U + step / 4U);
+                level = ((segment / 2U + step) % 3U == 0U) ? 0.88 : 0.12;
+            } else if (scene_id_ == "strobe") {
+                color = palette_color(palette, step);
+                level = context.beat.phase < (0.08 + context.mood * 0.12) ? 1.0 : 0.0;
+            } else if (scene_id_ == "breathe") {
+                color = mix(palette_color(palette, 0), palette_color(palette, 1), static_cast<double>(segment) / static_cast<double>(count));
+                level = 0.10 + (std::sin(context.beat.beat * 0.32) * 0.5 + 0.5) * 0.42;
+            } else if (scene_id_ == "theater") {
+                color = palette_color(palette, segment + step / 4U);
+                level = (segment + step) % 3U == 0U ? 0.92 : 0.055;
+            } else if (scene_id_ == "zipper") {
+                const std::size_t distance = std::min(segment, count - 1U - segment);
+                color = palette_color(palette, distance + step / 4U);
+                level = distance == (step % ((count + 1U) / 2U)) ? 0.95 : 0.06;
+            } else if (scene_id_ == "orbit") {
+                const double angle = context.beat.beat * 0.62 + static_cast<double>(segment) * 6.283185307 / static_cast<double>(count);
+                color = mix(palette_color(palette, 0), palette_color(palette, 2), std::sin(angle) * 0.5 + 0.5);
+                level = 0.12 + (std::cos(angle) * 0.5 + 0.5) * 0.73;
+            } else if (scene_id_ == "traffic") {
+                color = segment % 3U == 0U ? Rgb{255,0,0} : segment % 3U == 1U ? Rgb{255,180,0} : Rgb{0,255,0};
+                level = segment % 3U == step % 3U ? 0.90 : 0.07;
+            } else if (scene_id_ == "gate") {
+                const bool open = context.beat.phase < (0.20 + context.mood * 0.25);
+                color = palette_color(palette, segment + step / 2U);
+                level = open && (segment + step) % 2U == 0U ? 0.95 : 0.035;
+            } else if (scene_id_ == "binary") {
+                color = palette_color(palette, segment);
+                level = ((step >> (segment % 6U)) & 1U) != 0U ? 0.88 : 0.035;
+            } else if (scene_id_ == "fill") {
+                const std::size_t filled = step % (count + 1U);
+                color = palette_color(palette, step / (count + 1U));
+                level = segment < filled ? 0.82 : 0.035;
+            } else if (scene_id_ == "siren") {
+                const bool left = segment < count / 2U;
+                const bool phase_left = static_cast<std::size_t>(std::floor(context.beat.beat * 2.0)) % 2U == 0U;
+                color = left ? Rgb{255,0,0} : Rgb{0,80,255};
+                level = left == phase_left ? 0.95 : 0.025;
+            }
+            bar.set_wash(segment, scale(color, context.master * level));
+        }
+    }
+
+private:
+    std::string scene_id_;
+};
 
 class StaticGlowScene final : public RgbScene {
 public:
@@ -319,6 +427,10 @@ RgbSceneMixer::RgbSceneMixer()
     scenes_.push_back(std::make_unique<ChaseScene>());
     scenes_.push_back(std::make_unique<CometScene>());
     scenes_.push_back(std::make_unique<BeatSparkScene>());
+    for (const char* pattern : {"ball", "pair_swap", "rainbow", "scanner", "sparkle", "split", "blocks", "strobe",
+             "breathe", "theater", "zipper", "orbit", "traffic", "gate", "binary", "fill", "siren"}) {
+        scenes_.push_back(std::make_unique<PatternScene>(pattern));
+    }
 }
 
 const std::vector<std::unique_ptr<RgbScene>>& RgbSceneMixer::scenes() const {
@@ -409,11 +521,15 @@ void RgbSceneMixer::load_palettes_from_file(const std::string& path) {
 std::string RgbSceneMixer::effects_json() const {
     std::ostringstream out;
     out << '{';
-    for (std::size_t index = 0; index < scene_definitions_.size(); ++index) {
-        if (index != 0) {
+    bool first = true;
+    for (const RgbSceneDefinition& definition : scene_definitions_) {
+        if (definition.id.starts_with("standby_") || definition.id.starts_with("rgb_")) {
+            continue;
+        }
+        if (!first) {
             out << ',';
         }
-        const RgbSceneDefinition& definition = scene_definitions_.at(index);
+        first = false;
         out << '"' << definition.id << R"(":")" << definition.label << '"';
     }
     out << '}';

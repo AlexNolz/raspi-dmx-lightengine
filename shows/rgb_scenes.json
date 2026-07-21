@@ -1,53 +1,36 @@
 {
-  "schema": "lightengine.rgb_scenes.v1",
+  "schema": "lightengine.rgb_scenes.v2",
+  "description": "Show-editable LED scenes. type selects a reusable C++ renderer; speed, intensity and palette remain data.",
   "scenes": [
-    {
-      "id": "rgb_static",
-      "name": "Static Glow",
-      "type": "static_glow",
-      "palette": "preset",
-      "speed": 0.55,
-      "intensity": 0.42
-    },
-    {
-      "id": "rgb_beat_pulse",
-      "name": "Beat Pulse",
-      "type": "beat_pulse",
-      "palette": "preset",
-      "speed": 1.0,
-      "intensity": 0.72
-    },
-    {
-      "id": "rgb_chase",
-      "name": "Neon Chase",
-      "type": "chase",
-      "palette": "preset",
-      "speed": 1.15,
-      "intensity": 0.62
-    },
-    {
-      "id": "rgb_comet",
-      "name": "Blue Comet",
-      "type": "comet",
-      "palette": "preset",
-      "speed": 0.95,
-      "intensity": 0.68
-    },
-    {
-      "id": "rgb_spark",
-      "name": "Beat Spark",
-      "type": "beat_spark",
-      "palette": "preset",
-      "speed": 1.0,
-      "intensity": 0.8
-    },
-    {
-      "id": "rgb_amber_glow",
-      "name": "Amber Glow",
-      "type": "static_glow",
-      "palette": "amber_warm",
-      "speed": 0.35,
-      "intensity": 0.48
-    }
+    { "id": "pulse", "name": "Beat Pulse", "type": "beat_pulse", "palette": "preset", "speed": 1.0, "intensity": 0.92 },
+    { "id": "ball", "name": "Bouncing Ball", "type": "ball", "palette": "preset", "speed": 1.0, "intensity": 0.88 },
+    { "id": "pair_swap", "name": "Pair Swap", "type": "pair_swap", "palette": "preset", "speed": 1.0, "intensity": 0.90 },
+    { "id": "rainbow", "name": "Rainbow", "type": "rainbow", "palette": "preset", "speed": 1.0, "intensity": 0.82 },
+    { "id": "scanner", "name": "Scanner", "type": "scanner", "palette": "preset", "speed": 1.0, "intensity": 0.92 },
+    { "id": "sparkle", "name": "Sparkle", "type": "sparkle", "palette": "preset", "speed": 1.0, "intensity": 0.90 },
+    { "id": "split", "name": "Split", "type": "split", "palette": "preset", "speed": 1.0, "intensity": 0.92 },
+    { "id": "blocks", "name": "Color Blocks", "type": "blocks", "palette": "preset", "speed": 1.0, "intensity": 0.88 },
+    { "id": "strobe", "name": "Color Strobe", "type": "strobe", "palette": "preset", "speed": 1.0, "intensity": 1.0 },
+    { "id": "breathe", "name": "Breathe", "type": "breathe", "palette": "preset", "speed": 1.0, "intensity": 0.72 },
+    { "id": "comet", "name": "Comet", "type": "comet", "palette": "preset", "speed": 0.95, "intensity": 0.88 },
+    { "id": "theater", "name": "Theater Chase", "type": "theater", "palette": "preset", "speed": 1.0, "intensity": 0.90 },
+    { "id": "zipper", "name": "Zipper", "type": "zipper", "palette": "preset", "speed": 1.0, "intensity": 0.90 },
+    { "id": "orbit", "name": "Color Orbit", "type": "orbit", "palette": "preset", "speed": 1.0, "intensity": 0.88 },
+    { "id": "traffic", "name": "Traffic", "type": "traffic", "palette": "preset", "speed": 1.0, "intensity": 0.90 },
+    { "id": "gate", "name": "Beat Gate", "type": "gate", "palette": "preset", "speed": 1.0, "intensity": 0.95 },
+    { "id": "binary", "name": "Binary", "type": "binary", "palette": "preset", "speed": 1.0, "intensity": 0.90 },
+    { "id": "fill", "name": "Fill", "type": "fill", "palette": "preset", "speed": 1.0, "intensity": 0.88 },
+    { "id": "siren", "name": "Red/Blue Siren", "type": "siren", "palette": "preset", "speed": 1.0, "intensity": 0.95 },
+
+    { "id": "standby_glow", "name": "Standby Glow", "type": "breathe", "palette": "preset", "speed": 0.28, "intensity": 0.42 },
+    { "id": "standby_pairs", "name": "Standby Pairs", "type": "pair_swap", "palette": "preset", "speed": 0.18, "intensity": 0.28 },
+    { "id": "standby_scan", "name": "Standby Scan", "type": "scanner", "palette": "preset", "speed": 0.18, "intensity": 0.38 },
+
+    { "id": "rgb_static", "name": "Static Glow (Legacy)", "type": "static_glow", "palette": "preset", "speed": 0.55, "intensity": 0.42 },
+    { "id": "rgb_beat_pulse", "name": "Beat Pulse (Legacy)", "type": "beat_pulse", "palette": "preset", "speed": 1.0, "intensity": 0.72 },
+    { "id": "rgb_chase", "name": "Neon Chase (Legacy)", "type": "chase", "palette": "preset", "speed": 1.15, "intensity": 0.62 },
+    { "id": "rgb_comet", "name": "Comet (Legacy)", "type": "comet", "palette": "preset", "speed": 0.95, "intensity": 0.68 },
+    { "id": "rgb_spark", "name": "Beat Spark (Legacy)", "type": "beat_spark", "palette": "preset", "speed": 1.0, "intensity": 0.80 },
+    { "id": "rgb_amber_glow", "name": "Amber Glow", "type": "static_glow", "palette": "amber_warm", "speed": 0.35, "intensity": 0.48 }
   ]
 }

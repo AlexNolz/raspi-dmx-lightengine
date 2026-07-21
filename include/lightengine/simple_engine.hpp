@@ -7,6 +7,8 @@
 #include "lightengine/dmx.hpp"
 #include "lightengine/fixture_runtime.hpp"
 #include "lightengine/os2l_event.hpp"
+#include "lightengine/motion_scene.hpp"
+#include "lightengine/project.hpp"
 #include "lightengine/rgb_scene.hpp"
 
 #include <chrono>
@@ -14,6 +16,7 @@
 #include <cstdint>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace lightengine {
@@ -36,7 +39,7 @@ public:
     [[nodiscard]] DmxFrame render_frame(std::chrono::steady_clock::time_point now);
     [[nodiscard]] std::string state_json(std::chrono::steady_clock::time_point now) const;
     [[nodiscard]] ArtNetEndpoint artnet_endpoint() const;
-    [[nodiscard]] bool output_active() const;
+    [[nodiscard]] bool output_active(std::chrono::steady_clock::time_point now) const;
 
     void mark_artnet_packet_sent();
 
@@ -44,8 +47,12 @@ private:
     void apply_preset_locked(const std::string& preset);
     void select_next_effect_locked();
     [[nodiscard]] std::string active_effect_label_locked() const;
-    void render_safe_moving_head_blackout(DmxFrame& frame) const;
-    void render_moving_heads(DmxFrame& frame, const BeatSnapshot& beat) const;
+    void render_safe_moving_head_blackout(DmxFrame& frame, bool reset_active) const;
+    void render_moving_heads(
+        DmxFrame& frame,
+        const BeatSnapshot& beat,
+        std::chrono::steady_clock::time_point now,
+        std::string_view scene_override = {});
     void render_auxiliary_fixtures(DmxFrame& frame, const BeatSnapshot& beat, std::chrono::steady_clock::time_point now) const;
 
     mutable std::mutex mutex_;
@@ -81,9 +88,9 @@ private:
     std::string selected_gobo_{"open"};
     std::string selected_color_{"white"};
     std::uint8_t manual_color_value_{8};
-    std::vector<std::string> active_effects_{"rgb_static", "rgb_beat_pulse", "rgb_comet"};
-    std::string selected_effect_{"rgb_static"};
-    std::vector<std::string> active_scenes_{"mh_center_pulse"};
+    std::vector<std::string> active_effects_{"breathe", "pulse", "comet"};
+    std::string selected_effect_{"breathe"};
+    std::vector<std::string> active_scenes_{"center_pulse"};
     std::int64_t last_effect_change_position_{-1};
     std::array<std::uint16_t, 4> moving_head_starts_{51, 62, 73, 84};
     std::uint16_t strobe_start_{1};
@@ -92,6 +99,8 @@ private:
     std::chrono::steady_clock::time_point color_strobe_until_{};
     std::chrono::steady_clock::time_point strobe_out_until_{};
     std::chrono::steady_clock::time_point fog_until_{};
+    std::chrono::steady_clock::time_point reset_until_{};
+    std::chrono::steady_clock::time_point last_music_beat_at_{};
     std::uint64_t os2l_messages_{};
     std::uint64_t artnet_packets_{};
     std::chrono::steady_clock::time_point last_os2l_at_{};
@@ -99,7 +108,10 @@ private:
     RgbWashBar bar1_;
     RgbWashBar bar2_;
     RgbSceneMixer rgb_scenes_;
+    MotionSceneLibrary motion_scenes_;
     Zkymzl11Profile moving_head_profile_;
+    ShowProject project_;
+    std::array<Zkymzl11Look, 4> last_moving_head_looks_{};
 };
 
 }  // namespace lightengine

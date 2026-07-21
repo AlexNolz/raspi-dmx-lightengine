@@ -75,6 +75,14 @@ struct Zkymzl11Profile final {
     std::uint8_t color_test_max{127};
     std::uint8_t color_test_step{1};
     std::uint8_t color_test_default{8};
+    double pan_min{0.14};
+    double pan_max{0.54};
+    double pan_center{0.333};
+    double pan_width{0.30};
+    double tilt_min{0.56};
+    double tilt_max{0.82};
+    std::uint8_t reset_value{204};
+    double reset_hold_seconds{6.0};
 
     [[nodiscard]] static Zkymzl11Profile load_from_file(const std::string& path);
     [[nodiscard]] std::optional<std::uint8_t> color_value(const std::string& id) const;

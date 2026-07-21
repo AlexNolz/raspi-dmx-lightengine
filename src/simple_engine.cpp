@@ -62,7 +62,38 @@ SimpleEngine::SimpleEngine(SimpleEngineConfig config)
       bar2_{DmxAddress{config_.bar2_start}, config_.segments_per_bar} {
     rgb_scenes_.load_palettes_from_file("shows/color_palettes.json");
     rgb_scenes_.load_scene_definitions_from_file("shows/rgb_scenes.json");
+    motion_scenes_.load_from_file("shows/moving_head_scenes.json");
     moving_head_profile_ = Zkymzl11Profile::load_from_file("fixtures/zkymzl_11ch_moving_head.json");
+    project_ = load_show_project_from_file("shows/default.json");
+    std::size_t led_index = 0;
+    std::size_t head_index = 0;
+    for (const FixturePatch& fixture : project_.patch) {
+        if (!fixture.enabled) {
+            continue;
+        }
+        if (fixture.fixture_definition_id == "rgb_bar_8seg" && led_index < 2U) {
+            if (led_index++ == 0U) {
+                config_.bar1_start = fixture.address.value();
+            } else {
+                config_.bar2_start = fixture.address.value();
+            }
+        } else if (fixture.fixture_definition_id == "zkymzl_11ch" && head_index < moving_head_starts_.size()) {
+            moving_head_starts_.at(head_index++) = fixture.address.value();
+        } else if (fixture.fixture_definition_id == "stairville_1500w_strobe_2ch") {
+            strobe_start_ = fixture.address.value();
+        } else if (fixture.fixture_definition_id.find("fog") != std::string::npos) {
+            fog_start_ = fixture.address.value();
+        }
+    }
+    bar1_ = RgbWashBar{DmxAddress{config_.bar1_start}, config_.segments_per_bar};
+    bar2_ = RgbWashBar{DmxAddress{config_.bar2_start}, config_.segments_per_bar};
+    apply_preset_locked("club");
+    for (Zkymzl11Look& look : last_moving_head_looks_) {
+        look.pan = to_dmx(moving_head_profile_.pan_center);
+        look.tilt = 179;
+        look.color_wheel = moving_head_profile_.color_value("white").value_or(moving_head_profile_.color_test_default);
+        look.gobo = moving_head_profile_.gobo_value("open").value_or(18);
+    }
 }
 
 void SimpleEngine::apply_os2l_event(const Os2lEvent& event, const std::chrono::steady_clock::time_point received_at) {
@@ -74,6 +105,7 @@ void SimpleEngine::apply_os2l_event(const Os2lEvent& event, const std::chrono::s
             using Event = std::decay_t<decltype(typed_event)>;
             if constexpr (std::is_same_v<Event, Os2lBeatEvent>) {
                 beat_clock_.on_beat(typed_event, received_at);
+                last_music_beat_at_ = received_at;
                 const bool phrase_boundary = typed_event.position >= 0 && typed_event.position % 16 == 0 &&
                     typed_event.position != last_effect_change_position_;
                 if (typed_event.changed || phrase_boundary) {
@@ -105,7 +137,15 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
         [&](const auto& typed_command) {
             using Command = std::decay_t<decltype(typed_command)>;
             if constexpr (std::is_same_v<Command, SetRunningCommand>) {
+                const bool was_running = running_;
                 running_ = typed_command.running;
+                if (was_running && !running_) {
+                    const auto hold = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                        std::chrono::duration<double>{moving_head_profile_.reset_hold_seconds});
+                    reset_until_ = std::chrono::steady_clock::now() + hold;
+                } else if (running_) {
+                    reset_until_ = {};
+                }
             } else if constexpr (std::is_same_v<Command, SetBlackoutCommand>) {
                 blackout_ = typed_command.blackout;
             } else if constexpr (std::is_same_v<Command, SetMoodCommand>) {
@@ -146,7 +186,7 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
             } else if constexpr (std::is_same_v<Command, ToggleEffectCommand>) {
                 set_enabled(active_effects_, typed_command.effect, typed_command.enabled);
                 if (active_effects_.empty()) {
-                    active_effects_.push_back("rgb_static");
+                    active_effects_.push_back("breathe");
                 }
                 if (std::find(active_effects_.begin(), active_effects_.end(), selected_effect_) == active_effects_.end()) {
                     selected_effect_ = active_effects_.front();
@@ -244,16 +284,49 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
 
     const BeatSnapshot beat = beat_clock_.snapshot(now);
     if (!running_ || blackout_ || blackout_held_) {
-        render_safe_moving_head_blackout(frame);
+        render_safe_moving_head_blackout(frame, !running_ && now < reset_until_);
         return frame;
     }
 
     render_auxiliary_fixtures(frame, beat, now);
+    const bool whiteout_active = whiteout_held_ || now < whiteout_until_;
+    const bool strobe_out_active = strobe_out_held_ || now < strobe_out_until_;
+    const bool color_strobe_active = color_strobe_held_ || now < color_strobe_until_;
+    const bool standby_active = (last_music_beat_at_ == std::chrono::steady_clock::time_point{} ||
+        now - last_music_beat_at_ > std::chrono::seconds{4}) && !whiteout_active && !strobe_out_active && !color_strobe_active;
+    if (standby_active) {
+        if (led_layer_enabled_) {
+            const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
+            const std::array<std::string, 3> standby_led_scenes{"standby_glow", "standby_pairs", "standby_scan"};
+            const std::string& standby_scene = standby_led_scenes.at(static_cast<std::size_t>(seconds / 36) % standby_led_scenes.size());
+            const RgbSceneContext standby_context{beat, clamp01(master_ * led_master_), 0.28};
+            const RgbPalette& standby_palette = rgb_scenes_.palette_for_preset("club", seconds / 42);
+            rgb_scenes_.render(bar1_, {standby_scene}, standby_context, standby_palette);
+            rgb_scenes_.render(bar2_, {standby_scene}, standby_context, standby_palette);
+            bar1_.render_to(frame);
+            bar2_.render_to(frame);
+            for (std::size_t index = 0; index < bar1_.size(); ++index) {
+                preview_.at(index) = bar1_.wash_color(index);
+                preview_.at(index + bar1_.size()) = bar2_.wash_color(index);
+            }
+        }
+        if (motion_layer_enabled_) {
+            const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
+            const std::array<std::string, 3> standby_motion_scenes{"standby_sweep", "standby_depth", "standby_orbit"};
+            const std::string scene = motion_mode_ == "auto"
+                ? standby_motion_scenes.at(static_cast<std::size_t>(seconds / 45) % standby_motion_scenes.size())
+                : motion_mode_;
+            render_moving_heads(frame, beat, now, scene);
+        } else {
+            render_safe_moving_head_blackout(frame, false);
+        }
+        return frame;
+    }
     if (!led_layer_enabled_) {
         if (motion_layer_enabled_) {
-            render_moving_heads(frame, beat);
+            render_moving_heads(frame, beat, now);
         } else {
-            render_safe_moving_head_blackout(frame);
+            render_safe_moving_head_blackout(frame, false);
         }
         return frame;
     }
@@ -266,9 +339,6 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
     const std::vector<std::string> selected{selected_effect_};
     rgb_scenes_.render(bar1_, selected, scene_context, palette);
     rgb_scenes_.render(bar2_, selected, scene_context, palette);
-    const bool whiteout_active = whiteout_held_ || now < whiteout_until_;
-    const bool strobe_out_active = strobe_out_held_ || now < strobe_out_until_;
-    const bool color_strobe_active = color_strobe_held_ || now < color_strobe_until_;
     if (whiteout_active) {
         bar1_.set_all(Rgb{to_dmx(scene_context.master), to_dmx(scene_context.master), to_dmx(scene_context.master)});
         bar2_.set_all(Rgb{to_dmx(scene_context.master), to_dmx(scene_context.master), to_dmx(scene_context.master)});
@@ -300,9 +370,9 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
         preview_.at(index + bar1_.size()) = bar2_.wash_color(index);
     }
     if (motion_layer_enabled_) {
-        render_moving_heads(frame, beat);
+        render_moving_heads(frame, beat, now);
     } else {
-        render_safe_moving_head_blackout(frame);
+        render_safe_moving_head_blackout(frame, false);
     }
     return frame;
 }
@@ -329,6 +399,8 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(,"os2l_connected":)" << json_bool(beat.locked_to_os2l)
         << R"(,"os2l_connections":)" << os2l_messages_
         << R"(,"artnet_packets":)" << artnet_packets_
+        << R"(,"reset_active":)" << json_bool(!running_ && now < reset_until_)
+        << R"(,"standby":)" << json_bool(running_ && (last_music_beat_at_ == std::chrono::steady_clock::time_point{} || now - last_music_beat_at_ > std::chrono::seconds{4}))
         << R"(,"last_error":"")";
 
     out << R"(,"config":{"artnet_host":")" << config_.artnet_host
@@ -379,14 +451,29 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(,"channels":1,"enabled":true,"armed":)" << json_bool(fog_armed_) << "}}}";
 
     out << R"(,"effects":)" << rgb_scenes_.effects_json();
-    out << R"(,"motion_modes":{"auto":"Auto","center":"Mitte / Gobo-Test","center_pulse":"Mitte Pulse","point_chase":"Punkt Chase","line_sweep":"Links/Rechts Sweep","depth_sweep":"Vorne/Hinten Sweep","cross_pairs":"2 Links / 2 Rechts","split_strobe":"Links/Rechts Strobe","x_cross":"X Cross","color_fan":"Color Fan","pair_random":"Paare Random"})";
-    out << R"(,"motion_scenes":{"mh_center_pulse":"MH Center Pulse","mh_cross_sweep":"MH Cross Sweep","mh_rave_hits":"MH Rave Hits"})";
+    out << R"(,"motion_modes":{"auto":"Auto")";
+    const std::string motion_labels = motion_scenes_.labels_json();
+    if (motion_labels.size() > 2U) {
+        out << ',' << motion_labels.substr(1U, motion_labels.size() - 2U);
+    }
+    out << "}";
+    out << R"(,"motion_scenes":)" << motion_labels;
     out << R"(,"gobo_modes":{"static":"Manuell","beat_step":"Beat Step","random_beat":"Zufällig auf Beat","phrase_random":"Zufällig pro Phrase"})";
     out << R"(,"gobos":)";
     wheel_slots_json(out, moving_head_profile_.gobos);
     out << R"(,"moving_head_colors":)";
     wheel_slots_json(out, moving_head_profile_.colors);
-    out << R"(,"presets":["lounge","club","rave","game_show","rgb_hard","custom"],"show":{},"preview":[)";
+    out << R"(,"presets":[)";
+    for (std::size_t index = 0; index < project_.presets.size(); ++index) {
+        if (index != 0U) {
+            out << ',';
+        }
+        out << '"' << project_.presets.at(index).id << '"';
+    }
+    if (!project_.presets.empty()) {
+        out << ',';
+    }
+    out << R"("custom"],"show":{"id":")" << project_.id << R"(","name":")" << project_.name << R"("},"preview":[)";
     for (std::size_t index = 0; index < preview_.size(); ++index) {
         if (index != 0) {
             out << ',';
@@ -414,35 +501,72 @@ ArtNetEndpoint SimpleEngine::artnet_endpoint() const {
     };
 }
 
-bool SimpleEngine::output_active() const {
+bool SimpleEngine::output_active(const std::chrono::steady_clock::time_point now) const {
     std::lock_guard lock{mutex_};
-    return running_;
+    return running_ || now < reset_until_;
 }
 
-void SimpleEngine::render_safe_moving_head_blackout(DmxFrame& frame) const {
-    Zkymzl11Look park;
-    park.color_wheel = moving_head_profile_.color_value("white").value_or(moving_head_profile_.color_test_default);
-    park.gobo = moving_head_profile_.gobo_value("open").value_or(0);
-    for (const std::uint16_t start_address : moving_head_starts_) {
+void SimpleEngine::render_safe_moving_head_blackout(DmxFrame& frame, const bool reset_active) const {
+    for (std::size_t index = 0; index < moving_head_starts_.size(); ++index) {
+        const std::uint16_t start_address = moving_head_starts_.at(index);
         if (start_address > dmx_channel_count - 10U) {
             continue;
         }
+        Zkymzl11Look park = last_moving_head_looks_.at(index);
+        park.color_wheel = moving_head_profile_.color_value("white").value_or(moving_head_profile_.color_test_default);
+        park.gobo = moving_head_profile_.gobo_value("open").value_or(18);
+        park.shutter = 0;
+        park.dimmer = 0;
+        park.reset = reset_active ? moving_head_profile_.reset_value : 0;
         Zkymzl11MovingHead{DmxAddress{start_address}}.render_to(frame, park);
     }
 }
 
-void SimpleEngine::render_moving_heads(DmxFrame& frame, const BeatSnapshot& beat) const {
+void SimpleEngine::render_moving_heads(
+    DmxFrame& frame,
+    const BeatSnapshot& beat,
+    const std::chrono::steady_clock::time_point now,
+    const std::string_view scene_override) {
     const double mood = static_cast<double>(mood_) / 100.0;
     const double beat_hit = std::exp(-beat.phase * (3.0 + mood * 6.0));
 
-    std::string scene = motion_mode_;
+    std::string scene = scene_override.empty() ? motion_mode_ : std::string{scene_override};
     if (scene == "auto") {
         if (active_scenes_.empty()) {
-            scene = "mh_center_pulse";
+            scene = "center_pulse";
         } else {
+            std::vector<std::string> preferred;
+            if (selected_effect_ == "split" || selected_effect_ == "siren" || selected_effect_ == "traffic") {
+                preferred = {"split_strobe", "cross_pairs", "side_pingpong"};
+            } else if (selected_effect_ == "blocks" || selected_effect_ == "pair_swap" || selected_effect_ == "binary" || selected_effect_ == "gate") {
+                preferred = {"corner_swap", "pair_random", "x_cross"};
+            } else if (selected_effect_ == "ball" || selected_effect_ == "scanner" || selected_effect_ == "comet") {
+                preferred = {"gobo_chase", "line_sweep", "point_chase"};
+            } else if (selected_effect_ == "rainbow" || selected_effect_ == "theater" || selected_effect_ == "zipper" ||
+                selected_effect_ == "orbit" || selected_effect_ == "fill") {
+                preferred = {"color_fan", "depth_sweep", "pair_orbit"};
+            } else if (selected_effect_ == "sparkle" || selected_effect_ == "strobe" || mood > 0.86) {
+                preferred = {"x_cross", "all_random", "duo_random", "split_strobe"};
+            } else {
+                preferred = {"center_pulse", "point_chase", "depth_sweep"};
+            }
+            std::vector<std::string> pool;
+            for (const std::string& candidate : preferred) {
+                if (std::find(active_scenes_.begin(), active_scenes_.end(), candidate) != active_scenes_.end()) {
+                    pool.push_back(candidate);
+                }
+            }
+            if (pool.empty()) {
+                pool = active_scenes_;
+            }
             const auto phrase = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 16);
-            scene = active_scenes_.at(phrase % active_scenes_.size());
+            scene = pool.at(phrase % pool.size());
         }
+    }
+
+    const MotionSceneDefinition* definition = motion_scenes_.find(scene);
+    if (definition == nullptr) {
+        definition = motion_scenes_.find("center_pulse");
     }
 
     for (std::size_t index = 0; index < moving_head_starts_.size(); ++index) {
@@ -452,27 +576,21 @@ void SimpleEngine::render_moving_heads(DmxFrame& frame, const BeatSnapshot& beat
         }
 
         Zkymzl11Look look;
-        double level = 0.55 + mood * 0.30;
-        if (scene == "mh_cross_sweep" || scene == "line_sweep" || scene == "x_cross") {
-            const double wave = std::sin(beat.beat * (0.28 + mood * 0.32) + static_cast<double>(index) * 1.5707963268);
-            look.pan = static_cast<std::uint8_t>(std::lround(85.0 + wave * 45.0));
-            look.tilt = static_cast<std::uint8_t>(179 + (index % 2U == 0U ? -10 : 10));
-            level = 0.62 + beat_hit * 0.25;
-        } else if (scene == "mh_rave_hits" || scene == "split_strobe" || scene == "pair_random") {
-            const auto step = static_cast<std::size_t>(std::max<std::int64_t>(0, static_cast<std::int64_t>(std::floor(beat.beat))));
-            const bool right = (step + index / 2U) % 2U != 0U;
-            look.pan = right ? 125 : 45;
-            look.tilt = static_cast<std::uint8_t>(index % 2U == 0U ? 165 : 193);
-            level = 0.32 + beat_hit * 0.68;
-        } else if (scene == "center") {
-            look.pan = 85;
-            look.tilt = 179;
-            level = 0.72;
-        } else {
-            look.pan = 85;
-            look.tilt = 179;
-            level = 0.42 + beat_hit * 0.48;
-        }
+        const MotionTarget target = definition == nullptr
+            ? MotionTarget{}
+            : motion_scenes_.evaluate(*definition, index, moving_head_starts_.size(), beat, mood, 0x4c49474854ULL);
+        const double pan_width = moving_head_profile_.pan_width - target.y * 0.03;
+        const double pan = std::clamp(
+            moving_head_profile_.pan_center + (target.x - 0.5) * pan_width,
+            std::min(moving_head_profile_.pan_min, moving_head_profile_.pan_max),
+            std::max(moving_head_profile_.pan_min, moving_head_profile_.pan_max));
+        const double tilt = std::clamp(
+            moving_head_profile_.tilt_min + (moving_head_profile_.tilt_max - moving_head_profile_.tilt_min) * target.y,
+            std::min(moving_head_profile_.tilt_min, moving_head_profile_.tilt_max),
+            std::max(moving_head_profile_.tilt_min, moving_head_profile_.tilt_max));
+        look.pan = to_dmx(pan);
+        look.tilt = to_dmx(tilt);
+        const double level = (0.41 + mood * 0.53 + beat_hit * (0.06 + mood * 0.25)) * target.dimmer_scale;
 
         const auto color_step = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 8);
         look.color_wheel = moving_head_profile_.colors.at(
@@ -509,9 +627,25 @@ void SimpleEngine::render_moving_heads(DmxFrame& frame, const BeatSnapshot& beat
             }
         }
         look.gobo = selected_gobo;
-        look.dimmer = to_dmx(clamp01(level * master_ * motion_master_));
-        look.shutter = look.dimmer > 0U ? 10 : 0;
+        double final_level = clamp01(level * master_ * motion_master_);
+        const bool whiteout_active = whiteout_held_ || now < whiteout_until_;
+        const bool strobe_out_active = strobe_out_held_ || now < strobe_out_until_;
+        const bool color_strobe_active = color_strobe_held_ || now < color_strobe_until_;
+        if (whiteout_active || strobe_out_active) {
+            look.color_wheel = moving_head_profile_.color_value("white").value_or(look.color_wheel);
+            look.gobo = moving_head_profile_.gobo_value("open").value_or(look.gobo);
+            final_level = clamp01(master_ * motion_master_ * (strobe_out_active ? strobe_master_ : 1.0));
+        } else if (color_strobe_active) {
+            final_level = clamp01(master_ * motion_master_);
+        }
+        look.dimmer = to_dmx(final_level);
+        const bool scene_strobe = (scene == "split_strobe" && target.dimmer_scale > 0.5) ||
+            (scene == "gobo_chase" && beat.phase < 0.20) || (scene == "side_pingpong" && beat.phase < 0.16);
+        look.shutter = look.dimmer == 0U ? 0 : (strobe_out_active || color_strobe_active || scene_strobe
+            ? static_cast<std::uint8_t>(std::lround(18.0 + strobe_speed_ * 113.0))
+            : 10);
         look.movement_speed = static_cast<std::uint8_t>(std::lround(210.0 - mood * 120.0));
+        last_moving_head_looks_.at(index) = look;
         Zkymzl11MovingHead{DmxAddress{start_address}}.render_to(frame, look);
     }
 }
@@ -537,7 +671,7 @@ void SimpleEngine::render_auxiliary_fixtures(
 
 void SimpleEngine::select_next_effect_locked() {
     if (active_effects_.empty()) {
-        active_effects_.push_back("rgb_static");
+        active_effects_.push_back("breathe");
     }
     const auto current = std::find(active_effects_.begin(), active_effects_.end(), selected_effect_);
     if (current == active_effects_.end() || std::next(current) == active_effects_.end()) {
@@ -560,48 +694,46 @@ void SimpleEngine::apply_preset_locked(const std::string& preset) {
         preset_ = "custom";
         return;
     }
-    preset_ = preset;
-    if (preset == "rave") {
-        mood_ = 88;
-        active_effects_ = {"rgb_beat_pulse", "rgb_chase", "rgb_comet", "rgb_spark"};
-        active_scenes_ = {"mh_cross_sweep", "mh_rave_hits"};
+    auto definition = std::find_if(project_.presets.begin(), project_.presets.end(), [&](const ShowPreset& item) {
+        return item.id == preset;
+    });
+    if (definition == project_.presets.end()) {
+        definition = std::find_if(project_.presets.begin(), project_.presets.end(), [](const ShowPreset& item) {
+            return item.id == "club";
+        });
+    }
+    if (definition == project_.presets.end()) {
+        return;
+    }
+    preset_ = definition->id;
+    mood_ = definition->mood;
+    active_effects_ = definition->effects.empty() ? std::vector<std::string>{"breathe"} : definition->effects;
+    active_scenes_ = definition->motion_scenes.empty() ? std::vector<std::string>{"center_pulse"} : definition->motion_scenes;
+    if (preset_ == "rave") {
         gobo_enabled_ = true;
         gobo_mode_ = "random_beat";
         gobo_highpoint_only_ = false;
         gobo_shake_enabled_ = true;
-    } else if (preset == "rgb_hard") {
-        mood_ = 78;
-        active_effects_ = {"rgb_beat_pulse", "rgb_chase", "rgb_spark"};
-        active_scenes_ = {"mh_cross_sweep", "mh_rave_hits"};
+    } else if (preset_ == "rgb_hard") {
         gobo_enabled_ = true;
         gobo_mode_ = "beat_step";
         gobo_highpoint_only_ = false;
         gobo_shake_enabled_ = true;
-    } else if (preset == "lounge") {
-        mood_ = 35;
-        active_effects_ = {"rgb_static", "rgb_beat_pulse"};
-        active_scenes_ = {"mh_center_pulse"};
+    } else if (preset_ == "lounge") {
         gobo_enabled_ = false;
         gobo_mode_ = "static";
         gobo_highpoint_only_ = false;
         gobo_shake_enabled_ = false;
-    } else if (preset == "game_show") {
-        mood_ = 66;
-        active_effects_ = {"rgb_static", "rgb_chase", "rgb_spark"};
-        active_scenes_ = {"mh_center_pulse", "mh_cross_sweep"};
+    } else if (preset_ == "game_show") {
         gobo_enabled_ = true;
         gobo_mode_ = "phrase_random";
         gobo_highpoint_only_ = true;
         gobo_shake_enabled_ = false;
     } else {
-        mood_ = 58;
-        active_effects_ = {"rgb_static", "rgb_beat_pulse", "rgb_comet"};
-        active_scenes_ = {"mh_center_pulse", "mh_cross_sweep"};
         gobo_enabled_ = false;
         gobo_mode_ = "beat_step";
         gobo_highpoint_only_ = false;
         gobo_shake_enabled_ = false;
-        preset_ = "club";
     }
     selected_effect_ = active_effects_.front();
 }
