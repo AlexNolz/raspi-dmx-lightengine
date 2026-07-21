@@ -7,7 +7,6 @@
 #include <iterator>
 #include <regex>
 #include <sstream>
-#include <unordered_set>
 #include <string_view>
 #include <utility>
 
@@ -333,19 +332,57 @@ std::optional<double> regex_number_field(const std::string& object, const std::s
 }
 
 std::vector<std::string> regex_string_list_field(const std::string& object, const std::string& field) {
-    const std::regex list_pattern{"\"" + field + R"("\s*:\s*\[([^]]*)\])"};
-    std::smatch list_match;
-    if (!std::regex_search(object, list_match, list_pattern)) {
+    const std::string key = "\"" + field + "\"";
+    const std::size_t key_position = object.find(key);
+    if (key_position == std::string::npos) {
+        return {};
+    }
+    const std::size_t array_start = object.find('[', key_position + key.size());
+    const std::size_t array_end = array_start == std::string::npos ? std::string::npos : object.find(']', array_start + 1U);
+    if (array_start == std::string::npos || array_end == std::string::npos) {
         return {};
     }
 
     std::vector<std::string> values;
-    const std::string list = list_match.str(1);
+    const std::string list = object.substr(array_start + 1U, array_end - array_start - 1U);
     const std::regex string_pattern{"\"([^\"]+)\""};
     for (auto current = std::sregex_iterator{list.begin(), list.end(), string_pattern}; current != std::sregex_iterator{}; ++current) {
         values.push_back(current->str(1));
     }
     return values;
+}
+
+std::vector<std::string> json_objects_with_ids(const std::string& text) {
+    std::vector<std::string> objects;
+    std::vector<std::size_t> starts;
+    bool in_string = false;
+    bool escaped = false;
+    for (std::size_t index = 0; index < text.size(); ++index) {
+        const char character = text.at(index);
+        if (in_string) {
+            if (escaped) {
+                escaped = false;
+            } else if (character == '\\') {
+                escaped = true;
+            } else if (character == '"') {
+                in_string = false;
+            }
+            continue;
+        }
+        if (character == '"') {
+            in_string = true;
+        } else if (character == '{') {
+            starts.push_back(index);
+        } else if (character == '}' && !starts.empty()) {
+            const std::size_t start = starts.back();
+            starts.pop_back();
+            std::string object = text.substr(start, index - start + 1U);
+            if (object.find('{', 1U) == std::string::npos && regex_string_field(object, "id")) {
+                objects.push_back(std::move(object));
+            }
+        }
+    }
+    return objects;
 }
 
 std::vector<Rgb> regex_color_list_field(const std::string& object, const std::string& field) {
@@ -413,7 +450,7 @@ RgbSceneMixer::RgbSceneMixer()
           {"club_teal_pink", "Club Teal / Pink", {"teal", "pink", "blue", "yellow"}, resolve_named_colors({"teal", "pink", "blue", "yellow"})},
           {"rave_neon", "Rave Neon", {"green", "magenta", "cyan", "yellow"}, resolve_named_colors({"green", "magenta", "cyan", "yellow"})},
           {"rave_acid", "Rave Acid", {"acid", "cyan", "red", "uv"}, resolve_named_colors({"acid", "cyan", "red", "uv"})},
-          {"rgb_hard", "Hard RGB", {"red", "green", "blue", "white"}, resolve_named_colors({"red", "green", "blue", "white"})},
+          {"rgb_hard", "Hard RGB", {"red", "blue", "green"}, resolve_named_colors({"red", "blue", "green"})},
           {"deep_blue", "Deep Blue", {"blue", "cyan", "uv", "teal"}, resolve_named_colors({"blue", "cyan", "uv", "teal"})},
           {"amber_warm", "Warm Amber", {"orange", "amber", "red", "yellow"}, resolve_named_colors({"orange", "amber", "red", "yellow"})},
       },
@@ -422,7 +459,7 @@ RgbSceneMixer::RgbSceneMixer()
           {"club", {"club_blue_amber", "club_teal_pink", "deep_blue"}},
           {"rave", {"rave_neon", "rave_acid", "rgb_hard"}},
           {"game_show", {"deep_blue", "club_blue_amber"}},
-          {"rgb_hard", {"rgb_hard", "rave_acid"}},
+          {"rgb_hard", {"rgb_hard"}},
       },
       scene_definitions_{default_scene_definitions()} {
     scenes_.push_back(std::make_unique<StaticGlowScene>());
@@ -474,6 +511,16 @@ const RgbPalette& RgbSceneMixer::palette_by_id(const std::string_view id) const 
     return palettes_.front();
 }
 
+std::vector<std::string> RgbSceneMixer::palette_ids_for_preset(const std::string_view preset) const {
+    const auto found = std::find_if(preset_palette_sets_.begin(), preset_palette_sets_.end(), [&](const PresetPaletteSet& set) {
+        return set.preset_id == preset;
+    });
+    if (found != preset_palette_sets_.end() && !found->palette_ids.empty()) {
+        return found->palette_ids;
+    }
+    return {palette_for_preset(preset).id};
+}
+
 void RgbSceneMixer::load_palettes_from_file(const std::string& path) {
     std::ifstream file{path};
     if (!file) {
@@ -481,12 +528,9 @@ void RgbSceneMixer::load_palettes_from_file(const std::string& path) {
     }
 
     const std::string text{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
-    const std::regex object_pattern{R"(\{[\s\S]*?"id"\s*:\s*"[^"]+"[\s\S]*?\})"};
     std::vector<RgbPalette> loaded_palettes;
     std::vector<PresetPaletteSet> loaded_sets;
-    std::unordered_set<std::string> palette_ids;
-    for (auto current = std::sregex_iterator{text.begin(), text.end(), object_pattern}; current != std::sregex_iterator{}; ++current) {
-        const std::string object = current->str();
+    for (const std::string& object : json_objects_with_ids(text)) {
         const std::string id = regex_string_field(object, "id").value_or("");
         if (id.empty()) {
             continue;
@@ -495,7 +539,6 @@ void RgbSceneMixer::load_palettes_from_file(const std::string& path) {
         std::vector<Rgb> colors = regex_color_list_field(object, "colors");
         if (!colors.empty()) {
             loaded_palettes.push_back(RgbPalette{id, regex_string_field(object, "name").value_or(id), {}, std::move(colors)});
-            palette_ids.insert(id);
             continue;
         }
 
@@ -503,7 +546,6 @@ void RgbSceneMixer::load_palettes_from_file(const std::string& path) {
         colors = resolve_named_colors(color_names);
         if (!colors.empty()) {
             loaded_palettes.push_back(RgbPalette{id, regex_string_field(object, "name").value_or(id), std::move(color_names), std::move(colors)});
-            palette_ids.insert(id);
             continue;
         }
 
@@ -534,6 +576,19 @@ std::string RgbSceneMixer::effects_json() const {
         }
         first = false;
         out << '"' << definition.id << R"(":")" << definition.label << '"';
+    }
+    out << '}';
+    return out.str();
+}
+
+std::string RgbSceneMixer::palettes_json() const {
+    std::ostringstream out;
+    out << '{';
+    for (std::size_t index = 0; index < palettes_.size(); ++index) {
+        if (index != 0U) {
+            out << ',';
+        }
+        out << '"' << palettes_.at(index).id << R"(":")" << palettes_.at(index).label << '"';
     }
     out << '}';
     return out.str();

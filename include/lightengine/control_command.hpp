@@ -31,6 +31,7 @@ enum class ArmedFixtureId {
 
 enum class LiveTriggerId {
     next,
+    next_color,
     whiteout,
     color_strobe,
     strobe_out,
@@ -112,6 +113,16 @@ struct ToggleMotionSceneCommand final {
     bool enabled{true};
 };
 
+struct ToggleColorPaletteCommand final {
+    std::string palette;
+    bool enabled{true};
+};
+
+struct ToggleGoboPatternCommand final {
+    std::string gobo;
+    bool enabled{true};
+};
+
 struct SetGoboControlCommand final {
     bool enabled{false};
     std::string mode{"beat_step"};
@@ -119,6 +130,7 @@ struct SetGoboControlCommand final {
     bool highpoint_only{false};
     bool shake_enabled{false};
     double shake_mood_threshold{0.62};
+    bool fast_peak_enabled{true};
 };
 
 struct SetColorWheelCommand final {
@@ -172,6 +184,8 @@ using ControlCommand = std::variant<
     ApplyPresetCommand,
     ToggleEffectCommand,
     ToggleMotionSceneCommand,
+    ToggleColorPaletteCommand,
+    ToggleGoboPatternCommand,
     SetGoboControlCommand,
     SetColorWheelCommand,
     TriggerCommand,

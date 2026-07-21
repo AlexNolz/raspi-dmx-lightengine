@@ -19,6 +19,7 @@ struct ShowLayerContext final {
     double mood{0.5};
     std::string_view preset;
     std::uint64_t show_seed{};
+    std::uint64_t color_nonce{};
 };
 
 struct ColorLayerSelection final {
@@ -31,7 +32,8 @@ class ColorLayer final {
 public:
     [[nodiscard]] ColorLayerSelection resolve(
         const RgbSceneMixer& mixer,
-        const ShowLayerContext& context) const;
+        const ShowLayerContext& context,
+        const std::vector<std::string>& allowed_palette_ids = {}) const;
 };
 
 class SceneLayerPlanner final {
@@ -55,6 +57,7 @@ struct GoboLayerRequest final {
     bool shake_enabled{false};
     double shake_mood_threshold{0.82};
     bool scene_allows_shake{false};
+    bool fast_peak_enabled{true};
 };
 
 struct GoboLayerSelection final {
@@ -69,7 +72,8 @@ public:
         const Zkymzl11Profile& profile,
         const ShowLayerContext& context,
         const GoboLayerRequest& request,
-        std::size_t fixture_index) const;
+        std::size_t fixture_index,
+        const std::vector<std::string>& allowed_gobos = {}) const;
 };
 
 }  // namespace lightengine

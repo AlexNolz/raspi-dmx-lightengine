@@ -47,6 +47,8 @@ sortierte Palette. Seine Wechselrate folgt der Songphase:
 
 Der Gobo-Layer hält Muster ruhig 16 Beats, im Aufbau 8 Beats und am Peak 1 Beat.
 Shake ist zusätzlich an Peak, Mood-Schwelle und `allow_shake` der Moving-Szene gebunden.
+In der Oberfläche lassen sich einzelne Gobo-Muster sowie der schnelle Peak-Wechsel und
+Shake getrennt freigeben. Mindestens ein Muster bleibt immer aktiv.
 
 ## Farbpaletten
 
@@ -89,6 +91,11 @@ Preset-Paletten definieren, welche Paletten zu einem Preset passen:
 ```
 
 Wenn eine Szene `"palette": "preset"` nutzt, wählt die Engine passend zum aktiven Preset eine Palette aus dieser Gruppe. Die Auswahl darf beat-/phrasenabhängig wechseln, damit Shows nicht statisch wirken.
+
+Die Oberfläche zeigt alle Paletten als aktivierbaren Farbpool. „Nächste Farbe“ wechselt
+nur diesen Layer und lässt LED-Muster, Moving-Head-Bewegung und Gobo unverändert. Das
+Preset `rgb_hard` verwendet absichtlich ausschließlich `red`, `blue` und `green`; dabei
+werden nur die abstrakten Farb-Slots zyklisch vertauscht.
 
 ## RGB-Szenen
 

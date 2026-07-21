@@ -78,6 +78,7 @@ private:
     bool gobo_enabled_{false};
     bool gobo_highpoint_only_{false};
     bool gobo_shake_enabled_{false};
+    bool gobo_fast_peak_enabled_{true};
     bool manual_color_enabled_{false};
     bool manual_color_use_raw_{false};
     double master_{1.0};
@@ -96,6 +97,8 @@ private:
     std::vector<std::string> active_effects_{"breathe", "pulse", "comet"};
     std::string selected_effect_{"breathe"};
     std::vector<std::string> active_scenes_{"center_pulse"};
+    std::vector<std::string> active_palettes_;
+    std::vector<std::string> active_gobos_;
     std::int64_t last_effect_change_position_{-1};
     std::array<std::uint16_t, 4> moving_head_starts_{51, 62, 73, 84};
     std::uint16_t strobe_start_{1};
@@ -122,6 +125,7 @@ private:
     std::array<Zkymzl11Look, 4> last_moving_head_looks_{};
     std::uint64_t show_seed_{0x6c69676874656e67ULL};
     std::uint64_t manual_selection_nonce_{};
+    std::uint64_t color_selection_nonce_{};
 };
 
 }  // namespace lightengine

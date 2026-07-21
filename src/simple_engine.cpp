@@ -64,6 +64,9 @@ SimpleEngine::SimpleEngine(SimpleEngineConfig config)
     rgb_scenes_.load_scene_definitions_from_file("shows/rgb_scenes.json");
     motion_scenes_.load_from_file("shows/moving_head_scenes.json");
     moving_head_profile_ = Zkymzl11Profile::load_from_file("fixtures/zkymzl_11ch_moving_head.json");
+    for (const FixtureWheelSlot& gobo : moving_head_profile_.gobos) {
+        active_gobos_.push_back(gobo.id);
+    }
     project_ = load_show_project_from_file("shows/default.json");
     std::size_t led_index = 0;
     std::size_t head_index = 0;
@@ -215,6 +218,29 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
             } else if constexpr (std::is_same_v<Command, ToggleMotionSceneCommand>) {
                 set_enabled(active_scenes_, typed_command.scene, typed_command.enabled);
                 preset_ = "custom";
+            } else if constexpr (std::is_same_v<Command, ToggleColorPaletteCommand>) {
+                const bool known_palette = std::any_of(
+                    rgb_scenes_.palettes().begin(), rgb_scenes_.palettes().end(),
+                    [&](const RgbPalette& palette) { return palette.id == typed_command.palette; });
+                if (known_palette) {
+                    if (typed_command.enabled) {
+                        set_enabled(active_palettes_, typed_command.palette, true);
+                    } else if (active_palettes_.size() > 1U) {
+                        set_enabled(active_palettes_, typed_command.palette, false);
+                    }
+                    ++color_selection_nonce_;
+                }
+            } else if constexpr (std::is_same_v<Command, ToggleGoboPatternCommand>) {
+                const bool known_gobo = std::any_of(
+                    moving_head_profile_.gobos.begin(), moving_head_profile_.gobos.end(),
+                    [&](const FixtureWheelSlot& gobo) { return gobo.id == typed_command.gobo; });
+                if (known_gobo) {
+                    if (typed_command.enabled) {
+                        set_enabled(active_gobos_, typed_command.gobo, true);
+                    } else if (active_gobos_.size() > 1U) {
+                        set_enabled(active_gobos_, typed_command.gobo, false);
+                    }
+                }
             } else if constexpr (std::is_same_v<Command, SetGoboControlCommand>) {
                 gobo_enabled_ = typed_command.enabled;
                 gobo_mode_ = typed_command.mode;
@@ -222,6 +248,7 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
                 gobo_highpoint_only_ = typed_command.highpoint_only;
                 gobo_shake_enabled_ = typed_command.shake_enabled;
                 gobo_shake_mood_threshold_ = typed_command.shake_mood_threshold;
+                gobo_fast_peak_enabled_ = typed_command.fast_peak_enabled;
                 preset_ = "custom";
             } else if constexpr (std::is_same_v<Command, SetColorWheelCommand>) {
                 manual_color_enabled_ = typed_command.enabled;
@@ -267,6 +294,8 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
                     std::chrono::duration<double>{typed_command.seconds > 0.0 ? typed_command.seconds : default_seconds});
                 if (typed_command.trigger == LiveTriggerId::next) {
                     select_next_effect_locked();
+                } else if (typed_command.trigger == LiveTriggerId::next_color) {
+                    ++color_selection_nonce_;
                 } else if (typed_command.trigger == LiveTriggerId::whiteout) {
                     whiteout_until_ = now + duration;
                 } else if (typed_command.trigger == LiveTriggerId::color_strobe) {
@@ -303,8 +332,8 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
     const BeatSnapshot beat = beat_clock_.snapshot(now);
     const MusicDynamicsSnapshot dynamics = music_dynamics_.snapshot(beat, static_cast<double>(mood_) / 100.0, preset_);
     const ShowLayerContext layer_context{
-        beat, dynamics, static_cast<double>(mood_) / 100.0, preset_, show_seed_};
-    const ColorLayerSelection color_selection = color_layer_.resolve(rgb_scenes_, layer_context);
+        beat, dynamics, static_cast<double>(mood_) / 100.0, preset_, show_seed_, color_selection_nonce_};
+    const ColorLayerSelection color_selection = color_layer_.resolve(rgb_scenes_, layer_context, active_palettes_);
     if (!running_ || blackout_ || blackout_held_) {
         render_safe_moving_head_blackout(frame, !running_ && now < reset_until_);
         return frame;
@@ -325,7 +354,7 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
             ShowLayerContext standby_layer_context = layer_context;
             standby_layer_context.preset = "club";
             standby_layer_context.dynamics.section = MusicalSection::calm;
-            const RgbPalette standby_palette = color_layer_.resolve(rgb_scenes_, standby_layer_context).palette;
+            const RgbPalette standby_palette = color_layer_.resolve(rgb_scenes_, standby_layer_context, active_palettes_).palette;
             rgb_scenes_.render(bar1_, {standby_scene}, standby_context, standby_palette);
             rgb_scenes_.render(bar2_, {standby_scene}, standby_context, standby_palette);
             bar1_.render_to(frame);
@@ -415,8 +444,8 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
     const BeatSnapshot beat = beat_clock_.snapshot(now);
     const MusicDynamicsSnapshot dynamics = music_dynamics_.snapshot(beat, static_cast<double>(mood_) / 100.0, preset_);
     const ShowLayerContext layer_context{
-        beat, dynamics, static_cast<double>(mood_) / 100.0, preset_, show_seed_};
-    const ColorLayerSelection color_selection = color_layer_.resolve(rgb_scenes_, layer_context);
+        beat, dynamics, static_cast<double>(mood_) / 100.0, preset_, show_seed_, color_selection_nonce_};
+    const ColorLayerSelection color_selection = color_layer_.resolve(rgb_scenes_, layer_context, active_palettes_);
     const std::string resolved_motion_scene = motion_mode_ == "auto"
         ? scene_layer_planner_.select_motion_scene(active_scenes_, motion_scenes_, layer_context)
         : motion_mode_;
@@ -475,6 +504,7 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(","highpoint_only":)" << json_bool(gobo_highpoint_only_)
         << R"(,"shake_enabled":)" << json_bool(gobo_shake_enabled_)
         << R"(,"shake_mood_threshold":)" << gobo_shake_mood_threshold_
+        << R"(,"fast_peak_enabled":)" << json_bool(gobo_fast_peak_enabled_)
         << R"(})"
         << R"(,"color_wheel":{"enabled":)" << json_bool(manual_color_enabled_)
         << R"(,"use_raw_value":)" << json_bool(manual_color_use_raw_)
@@ -488,6 +518,10 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
     json_string_array(out, active_effects_);
     out << R"(,"enabled_motion_scenes":)";
     json_string_array(out, active_scenes_);
+    out << R"(,"enabled_color_palettes":)";
+    json_string_array(out, active_palettes_);
+    out << R"(,"enabled_gobos":)";
+    json_string_array(out, active_gobos_);
     out << R"(,"layers":{"led_bars":)" << json_bool(led_layer_enabled_)
         << R"(,"motion":)" << json_bool(motion_layer_enabled_)
         << R"(,"strobe":)" << json_bool(strobe_armed_)
@@ -507,6 +541,7 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(,"channels":1,"enabled":true,"armed":)" << json_bool(fog_armed_) << "}}}";
 
     out << R"(,"effects":)" << rgb_scenes_.effects_json();
+    out << R"(,"color_palettes":)" << rgb_scenes_.palettes_json();
     out << R"(,"motion_modes":{"auto":"Auto")";
     const std::string motion_labels = motion_scenes_.labels_json();
     if (motion_labels.size() > 2U) {
@@ -587,7 +622,7 @@ void SimpleEngine::render_moving_heads(
     const double mood = static_cast<double>(mood_) / 100.0;
     const double beat_hit = motion_beat_pulse_enabled_ ? std::exp(-beat.phase * (3.0 + mood * 6.0)) : 0.0;
     const MusicDynamicsSnapshot dynamics = music_dynamics_.snapshot(beat, mood, preset_);
-    const ShowLayerContext layer_context{beat, dynamics, mood, preset_, show_seed_};
+    const ShowLayerContext layer_context{beat, dynamics, mood, preset_, show_seed_, color_selection_nonce_};
 
     std::string scene = scene_override.empty() ? motion_mode_ : std::string{scene_override};
     if (scene == "auto") {
@@ -644,8 +679,9 @@ void SimpleEngine::render_moving_heads(
             gobo_shake_enabled_,
             gobo_shake_mood_threshold_,
             definition != nullptr && definition->allow_shake,
+            gobo_fast_peak_enabled_,
         };
-        look.gobo = gobo_layer_.resolve(moving_head_profile_, layer_context, gobo_request, index).value;
+        look.gobo = gobo_layer_.resolve(moving_head_profile_, layer_context, gobo_request, index, active_gobos_).value;
         double final_level = clamp01(level * master_ * motion_master_);
         const bool whiteout_active = whiteout_held_ || now < whiteout_until_;
         const bool strobe_out_active = strobe_out_held_ || now < strobe_out_until_;
@@ -707,7 +743,7 @@ void SimpleEngine::select_next_effect_locked(const MusicDynamicsSnapshot* dynami
         ++manual_selection_nonce_;
     }
     const ShowLayerContext context{
-        beat, current_dynamics, static_cast<double>(mood_) / 100.0, preset_, show_seed_};
+        beat, current_dynamics, static_cast<double>(mood_) / 100.0, preset_, show_seed_, color_selection_nonce_};
     selected_effect_ = scene_layer_planner_.select_rgb_scene(
         active_effects_, rgb_scenes_.scene_definitions(), context, manual_selection_nonce_);
 }
@@ -740,6 +776,8 @@ void SimpleEngine::apply_preset_locked(const std::string& preset) {
     mood_ = definition->mood;
     active_effects_ = definition->effects.empty() ? std::vector<std::string>{"breathe"} : definition->effects;
     active_scenes_ = definition->motion_scenes.empty() ? std::vector<std::string>{"center_pulse"} : definition->motion_scenes;
+    active_palettes_ = rgb_scenes_.palette_ids_for_preset(preset_);
+    ++color_selection_nonce_;
     gobo_enabled_ = true;
     gobo_mode_ = "musical";
     gobo_highpoint_only_ = false;

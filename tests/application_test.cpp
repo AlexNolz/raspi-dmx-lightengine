@@ -10,6 +10,7 @@
 #include "lightengine/show_layers.hpp"
 #include "lightengine/simple_engine.hpp"
 
+#include <algorithm>
 #include <iostream>
 #include <chrono>
 #include <optional>
@@ -261,19 +262,51 @@ int main() {
             std::cerr << "ZKYMZL wheel mappings were not loaded from the fixture JSON\n";
             return 1;
         }
+        const lightengine::ShowLayerContext context{
+            lightengine::BeatSnapshot{8.0, 0.0, 8, 112.0, 0.5, true, false},
+            lightengine::MusicDynamicsSnapshot{lightengine::MusicalSection::calm, 0.35, 0.3, 0.0, false, false},
+            0.4,
+            "warmup",
+            42U,
+        };
+        lightengine::GoboLayerRequest request;
+        request.enabled = true;
+        request.mode = "musical";
+        const lightengine::GoboLayerSelection selected =
+            lightengine::GoboLayer{}.resolve(profile, context, request, 0U, {"cloverleaf"});
+        if (selected.value != 26U) {
+            std::cerr << "Gobo layer did not respect its enabled-pattern pool\n";
+            return 1;
+        }
     }
 
     {
         const std::optional<lightengine::ControlCommand> command = lightengine::parse_control_command(
-            R"({"action":"set_gobo_control","enabled":true,"mode":"random_beat","selected_gobo":"cloverleaf","highpoint_only":true,"shake_enabled":true,"shake_mood_threshold":0.74})");
+            R"({"action":"set_gobo_control","enabled":true,"mode":"random_beat","selected_gobo":"cloverleaf","highpoint_only":true,"shake_enabled":true,"shake_mood_threshold":0.74,"fast_peak_enabled":false})");
         if (!command || !std::holds_alternative<lightengine::SetGoboControlCommand>(*command)) {
             std::cerr << "set_gobo_control command was not parsed\n";
             return 1;
         }
         const auto gobo = std::get<lightengine::SetGoboControlCommand>(*command);
         if (!gobo.enabled || gobo.mode != "random_beat" || gobo.selected_gobo != "cloverleaf" || !gobo.highpoint_only || !gobo.shake_enabled ||
-            gobo.shake_mood_threshold < 0.73 || gobo.shake_mood_threshold > 0.75) {
+            gobo.shake_mood_threshold < 0.73 || gobo.shake_mood_threshold > 0.75 || gobo.fast_peak_enabled) {
             std::cerr << "set_gobo_control command contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
+        const auto palette = lightengine::parse_control_command(
+            R"({"action":"toggle_color_palette","palette":"sunset_gold","enabled":false})");
+        const auto gobo = lightengine::parse_control_command(
+            R"({"action":"toggle_gobo_pattern","gobo":"dot_grid","enabled":false})");
+        const auto color_trigger = lightengine::parse_live_trigger_id("next_color");
+        if (!palette || !std::holds_alternative<lightengine::ToggleColorPaletteCommand>(*palette) ||
+            std::get<lightengine::ToggleColorPaletteCommand>(*palette).enabled ||
+            !gobo || !std::holds_alternative<lightengine::ToggleGoboPatternCommand>(*gobo) ||
+            std::get<lightengine::ToggleGoboPatternCommand>(*gobo).enabled ||
+            color_trigger != lightengine::LiveTriggerId::next_color) {
+            std::cerr << "Color-palette or gobo-pattern controls were not parsed\n";
             return 1;
         }
     }
@@ -405,6 +438,26 @@ int main() {
             first_colors.palette.color_names != repeated_colors.palette.color_names ||
             first_colors.palette.colors != repeated_colors.palette.colors) {
             std::cerr << "Color layer was not stable for a calm musical section\n";
+            return 1;
+        }
+
+        lightengine::ShowLayerContext rgb_layers = calm_layers;
+        rgb_layers.preset = "rgb_hard";
+        const lightengine::ColorLayerSelection rgb_first = color_layer.resolve(mixer, rgb_layers, {"rgb_hard"});
+        rgb_layers.color_nonce = 1U;
+        const lightengine::ColorLayerSelection rgb_next = color_layer.resolve(mixer, rgb_layers, {"rgb_hard"});
+        if (rgb_first.palette.color_names.size() != 3U ||
+            std::find(rgb_first.palette.color_names.begin(), rgb_first.palette.color_names.end(), "red") == rgb_first.palette.color_names.end() ||
+            std::find(rgb_first.palette.color_names.begin(), rgb_first.palette.color_names.end(), "blue") == rgb_first.palette.color_names.end() ||
+            std::find(rgb_first.palette.color_names.begin(), rgb_first.palette.color_names.end(), "green") == rgb_first.palette.color_names.end() ||
+            rgb_first.palette.color_names == rgb_next.palette.color_names) {
+            std::cerr << "Pure RGB palette did not contain and rotate only red, blue and green: first=";
+            for (const std::string& color : rgb_first.palette.color_names) std::cerr << color << ',';
+            std::cerr << " next=";
+            for (const std::string& color : rgb_next.palette.color_names) std::cerr << color << ',';
+            std::cerr << " palettes=";
+            for (const auto& palette : mixer.palettes()) std::cerr << palette.id << ':' << palette.color_names.size() << ',';
+            std::cerr << '\n';
             return 1;
         }
 
@@ -587,6 +640,25 @@ int main() {
             !shared_first_color || coordinated_state.find(R"("layer_state":{"rgb_scene":)") == std::string::npos) {
             std::cerr << "Warm-up LED flood and moving-head palette colors were not coordinated: LED="
                       << static_cast<int>(coordinated.at(2)) << " head=" << static_cast<int>(coordinated.at(54)) << '\n';
+            return 1;
+        }
+
+        engine.apply_control_command(lightengine::ApplyPresetCommand{"rgb_hard"});
+        const std::string rgb_state = engine.state_json(now);
+        engine.apply_control_command(lightengine::TriggerCommand{lightengine::LiveTriggerId::next_color, 0.0});
+        const std::string next_rgb_state = engine.state_json(now);
+        const std::size_t rgb_slots_start = rgb_state.find(R"("color_slots":[)");
+        const std::size_t rgb_slots_end = rgb_slots_start == std::string::npos
+            ? std::string::npos
+            : rgb_state.find(']', rgb_slots_start);
+        const std::string rgb_slots = rgb_slots_end == std::string::npos
+            ? std::string{}
+            : rgb_state.substr(rgb_slots_start, rgb_slots_end - rgb_slots_start + 1U);
+        if (rgb_state.find(R"("enabled_color_palettes":["rgb_hard"])") == std::string::npos ||
+            rgb_slots.find("red") == std::string::npos || rgb_slots.find("blue") == std::string::npos ||
+            rgb_slots.find("green") == std::string::npos || rgb_slots.find("white") != std::string::npos ||
+            rgb_state == next_rgb_state) {
+            std::cerr << "Pure RGB preset or manual next-color trigger did not keep and rotate its RGB-only pool\n";
             return 1;
         }
     }

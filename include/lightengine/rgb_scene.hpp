@@ -61,7 +61,9 @@ public:
     [[nodiscard]] const RgbPalette& palette_for_preset(std::string_view preset) const;
     [[nodiscard]] const RgbPalette& palette_for_preset(std::string_view preset, std::int64_t seed) const;
     [[nodiscard]] const RgbPalette& palette_by_id(std::string_view id) const;
+    [[nodiscard]] std::vector<std::string> palette_ids_for_preset(std::string_view preset) const;
     [[nodiscard]] std::string effects_json() const;
+    [[nodiscard]] std::string palettes_json() const;
 
     void load_palettes_from_file(const std::string& path);
     void load_scene_definitions_from_file(const std::string& path);

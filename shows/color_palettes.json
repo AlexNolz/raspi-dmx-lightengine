@@ -34,7 +34,7 @@
     {
       "id": "rgb_hard",
       "name": "Hard RGB",
-      "colors": ["red", "green", "blue", "white"]
+      "colors": ["red", "blue", "green"]
     },
     {
       "id": "edm_electric",
@@ -60,15 +60,60 @@
       "id": "warmup_classics",
       "name": "Warm-up Saturated Classics",
       "colors": ["amber", "magenta", "blue", "red"]
+    },
+    {
+      "id": "sunset_gold",
+      "name": "Sunset Gold / Magenta",
+      "colors": ["amber", "orange", "magenta", "yellow"]
+    },
+    {
+      "id": "vintage_party",
+      "name": "Vintage Rot / Blau / Gold",
+      "colors": ["red", "blue", "amber", "magenta"]
+    },
+    {
+      "id": "champagne_blue",
+      "name": "Champagner / Cyan / Blau",
+      "colors": ["yellow", "amber", "cyan", "blue"]
+    },
+    {
+      "id": "rose_teal",
+      "name": "Rose / Türkis",
+      "colors": ["pink", "teal", "amber", "blue"]
+    },
+    {
+      "id": "classic_red_gold",
+      "name": "Klassik Rot / Gold",
+      "colors": ["red", "amber", "yellow", "magenta"]
+    },
+    {
+      "id": "disco_classics",
+      "name": "Disco Classics",
+      "colors": ["magenta", "cyan", "amber", "blue"]
+    },
+    {
+      "id": "ocean_sunset",
+      "name": "Ocean Sunset",
+      "colors": ["blue", "teal", "orange", "pink"]
+    },
+    {
+      "id": "club_red_cyan",
+      "name": "Club Rot / Cyan",
+      "colors": ["red", "cyan", "blue", "amber"]
+    },
+    {
+      "id": "edm_pink_acid",
+      "name": "EDM Pink / Acid",
+      "colors": ["pink", "acid", "cyan", "blue"]
     }
   ],
   "preset_palettes": [
-    { "id": "warmup", "palettes": ["warmup_classics", "amber_warm", "deep_blue"] },
-    { "id": "club", "palettes": ["club_blue_amber", "club_teal_pink", "deep_blue"] },
-    { "id": "rave", "palettes": ["rave_neon", "rave_acid", "rgb_hard"] },
+    { "id": "warmup", "palettes": ["warmup_classics", "amber_warm", "deep_blue", "sunset_gold", "vintage_party", "champagne_blue", "rose_teal", "classic_red_gold", "disco_classics", "ocean_sunset"] },
+    { "id": "club", "palettes": ["club_blue_amber", "club_teal_pink", "deep_blue", "club_red_cyan", "disco_classics", "ocean_sunset"] },
+    { "id": "rave", "palettes": ["rave_neon", "rave_acid", "rgb_hard", "edm_pink_acid"] },
     { "id": "game_show", "palettes": ["deep_blue", "club_blue_amber"] },
-    { "id": "rgb_hard", "palettes": ["rgb_hard", "rave_acid"] },
-    { "id": "edm", "palettes": ["edm_electric", "club_teal_pink"] },
+    { "id": "rgb_hard", "palettes": ["rgb_hard"] },
+    { "id": "edm", "palettes": ["edm_electric", "club_teal_pink", "edm_pink_acid", "club_red_cyan"] },
     { "id": "techno", "palettes": ["techno_strike", "deep_blue"] },
     { "id": "hardstyle", "palettes": ["hardstyle_power", "rave_acid", "rgb_hard"] },
     { "id": "ballermann", "palettes": ["ballermann_party", "rgb_hard"] }

@@ -3,6 +3,7 @@ const controlUrl = "/api/control";
 
 let lastState = null;
 let effectsBuilt = false;
+let colorPalettesBuilt = false;
 let motionBuilt = false;
 let motionScenesBuilt = false;
 let goboModesBuilt = false;
@@ -39,15 +40,18 @@ const strobeSpeedValue = document.querySelector("#strobeSpeedValue");
 const runButton = document.querySelector("#runButton");
 const blackoutButton = document.querySelector("#blackoutButton");
 const effectsBox = document.querySelector("#effects");
+const colorPalettesBox = document.querySelector("#colorPalettes");
 const motionBox = document.querySelector("#motionModes");
 const motionScenesBox = document.querySelector("#motionScenes");
 const goboEnabled = document.querySelector("#goboEnabled");
 const goboMode = document.querySelector("#goboMode");
 const goboSelect = document.querySelector("#goboSelect");
 const goboHighpointOnly = document.querySelector("#goboHighpointOnly");
+const goboFastPeak = document.querySelector("#goboFastPeak");
 const goboShakeEnabled = document.querySelector("#goboShakeEnabled");
 const goboShakeMood = document.querySelector("#goboShakeMood");
 const goboShakeMoodValue = document.querySelector("#goboShakeMoodValue");
+const goboPatternsBox = document.querySelector("#goboPatterns");
 const colorWheelEnabled = document.querySelector("#colorWheelEnabled");
 const colorWheelSelect = document.querySelector("#colorWheelSelect");
 const colorWheelUseRaw = document.querySelector("#colorWheelUseRaw");
@@ -133,14 +137,33 @@ function render(state) {
       option.textContent = label;
       return option;
     }));
+    goboPatternsBox.replaceChildren(...Object.entries(state.gobos).map(([key, label]) => {
+      const row = document.createElement("label");
+      row.className = "effect-toggle gobo-pattern-toggle";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.dataset.goboPattern = key;
+      checkbox.addEventListener("change", () => {
+        send({ action: "toggle_gobo_pattern", gobo: key, enabled: checkbox.checked });
+      });
+      const text = document.createElement("span");
+      text.textContent = label;
+      row.append(checkbox, text);
+      return row;
+    }));
   }
   goboEnabled.checked = Boolean(goboConfig.enabled);
   goboMode.value = goboConfig.mode || "beat_step";
   goboSelect.value = goboConfig.selected_gobo || "open";
   goboHighpointOnly.checked = Boolean(goboConfig.highpoint_only);
+  goboFastPeak.checked = Boolean(goboConfig.fast_peak_enabled);
   goboShakeEnabled.checked = Boolean(goboConfig.shake_enabled);
   goboShakeMood.value = Math.round((goboConfig.shake_mood_threshold ?? 0.62) * 100);
   goboShakeMoodValue.textContent = goboShakeMood.value;
+  document.querySelectorAll("[data-gobo-pattern]").forEach((checkbox) => {
+    checkbox.checked = (config.enabled_gobos || []).includes(checkbox.dataset.goboPattern);
+    checkbox.closest(".gobo-pattern-toggle")?.classList.toggle("active", checkbox.checked);
+  });
   const colorWheelConfig = config.color_wheel || {};
   if (!movingHeadColorsBuilt && state.moving_head_colors) {
     movingHeadColorsBuilt = true;
@@ -179,6 +202,29 @@ function render(state) {
 
   document.querySelectorAll("[data-preset]").forEach((button) => {
     button.classList.toggle("active", button.dataset.preset === config.preset);
+  });
+
+  if (!colorPalettesBuilt && state.color_palettes) {
+    colorPalettesBuilt = true;
+    colorPalettesBox.replaceChildren(...Object.entries(state.color_palettes).map(([key, label]) => {
+      const row = document.createElement("label");
+      row.className = "effect-toggle palette-toggle";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.dataset.colorPalette = key;
+      checkbox.addEventListener("change", () => {
+        send({ action: "toggle_color_palette", palette: key, enabled: checkbox.checked });
+      });
+      const text = document.createElement("span");
+      text.textContent = label;
+      row.append(checkbox, text);
+      return row;
+    }));
+  }
+
+  document.querySelectorAll("[data-color-palette]").forEach((checkbox) => {
+    checkbox.checked = (config.enabled_color_palettes || []).includes(checkbox.dataset.colorPalette);
+    checkbox.closest(".palette-toggle")?.classList.toggle("active", checkbox.checked);
   });
 
   if (!motionBuilt && state.motion_modes) {
@@ -392,7 +438,8 @@ function sendGoboControl() {
     selected_gobo: goboSelect.value,
     highpoint_only: goboHighpointOnly.checked,
     shake_enabled: goboShakeEnabled.checked,
-    shake_mood_threshold: Number(goboShakeMood.value) / 100
+    shake_mood_threshold: Number(goboShakeMood.value) / 100,
+    fast_peak_enabled: goboFastPeak.checked
   });
 }
 
@@ -400,6 +447,7 @@ goboEnabled.addEventListener("change", sendGoboControl);
 goboMode.addEventListener("change", sendGoboControl);
 goboSelect.addEventListener("change", sendGoboControl);
 goboHighpointOnly.addEventListener("change", sendGoboControl);
+goboFastPeak.addEventListener("change", sendGoboControl);
 goboShakeEnabled.addEventListener("change", sendGoboControl);
 goboShakeMood.addEventListener("input", () => {
   goboShakeMoodValue.textContent = goboShakeMood.value;
@@ -410,7 +458,8 @@ goboShakeMood.addEventListener("input", () => {
     selected_gobo: goboSelect.value,
     highpoint_only: goboHighpointOnly.checked,
     shake_enabled: goboShakeEnabled.checked,
-    shake_mood_threshold: Number(goboShakeMood.value) / 100
+    shake_mood_threshold: Number(goboShakeMood.value) / 100,
+    fast_peak_enabled: goboFastPeak.checked
   });
 });
 
