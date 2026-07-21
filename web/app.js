@@ -143,7 +143,7 @@ function render(state) {
   colorWheelUseRaw.checked = Boolean(colorWheelConfig.use_raw_value);
   colorWheelSelect.value = colorWheelConfig.selected_color || "white";
   colorWheelRaw.min = colorWheelConfig.test_min ?? 0;
-  colorWheelRaw.max = colorWheelConfig.test_max ?? 127;
+  colorWheelRaw.max = colorWheelConfig.test_max ?? 255;
   colorWheelRaw.step = colorWheelConfig.test_step ?? 1;
   colorWheelRaw.value = colorWheelConfig.raw_value ?? 3;
   colorWheelRawValue.textContent = colorWheelRaw.value;

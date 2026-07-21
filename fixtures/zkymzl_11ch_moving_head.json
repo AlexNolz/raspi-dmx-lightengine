@@ -43,7 +43,7 @@
       },
       "manual_test": {
         "min": 0,
-        "max": 127,
+        "max": 255,
         "step": 1,
         "default": 3
       }
