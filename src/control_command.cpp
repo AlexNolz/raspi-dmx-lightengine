@@ -375,6 +375,14 @@ std::optional<ControlCommand> parse_control_command(const std::string& payload) 
             clamp_double(field_double(*fields, "shake_mood_threshold").value_or(0.62), 0.0, 1.0),
         };
     }
+    if (action == "set_color_wheel") {
+        return SetColorWheelCommand{
+            field_bool(*fields, "enabled").value_or(false),
+            field_bool(*fields, "use_raw_value").value_or(false),
+            field_string(*fields, "selected_color").value_or("white"),
+            field_u8_clamped(*fields, "raw_value", 3, 0, 255),
+        };
+    }
     if (action == "trigger") {
         const auto trigger = parse_live_trigger_id(field_string(*fields, "name").value_or("next"));
         if (!trigger) {
@@ -457,6 +465,9 @@ const char* control_command_type_name(const ControlCommand& command) noexcept {
     }
     if (std::holds_alternative<SetGoboControlCommand>(command)) {
         return "set_gobo_control";
+    }
+    if (std::holds_alternative<SetColorWheelCommand>(command)) {
+        return "set_color_wheel";
     }
     if (std::holds_alternative<TriggerCommand>(command)) {
         return "trigger";

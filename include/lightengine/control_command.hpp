@@ -111,6 +111,13 @@ struct SetGoboControlCommand final {
     double shake_mood_threshold{0.62};
 };
 
+struct SetColorWheelCommand final {
+    bool enabled{false};
+    bool use_raw_value{false};
+    std::string selected_color{"white"};
+    std::uint8_t raw_value{3};
+};
+
 struct TriggerCommand final {
     LiveTriggerId trigger{LiveTriggerId::next};
     double seconds{0.0};
@@ -155,6 +162,7 @@ using ControlCommand = std::variant<
     ToggleEffectCommand,
     ToggleMotionSceneCommand,
     SetGoboControlCommand,
+    SetColorWheelCommand,
     TriggerCommand,
     SetHoldTriggerCommand,
     SetArtNetCommand,

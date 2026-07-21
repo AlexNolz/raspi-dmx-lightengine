@@ -220,16 +220,40 @@ int main() {
     }
 
     {
+        const lightengine::Zkymzl11Profile profile =
+            lightengine::Zkymzl11Profile::load_from_file("fixtures/zkymzl_11ch_moving_head.json");
+        if (profile.gobo_value("spiral") != 0 || profile.gobo_value("open") != 18 ||
+            profile.gobo_value("cloverleaf") != 26 || profile.color_test_max != 127) {
+            std::cerr << "ZKYMZL wheel mappings were not loaded from the fixture JSON\n";
+            return 1;
+        }
+    }
+
+    {
         const std::optional<lightengine::ControlCommand> command = lightengine::parse_control_command(
-            R"({"action":"set_gobo_control","enabled":true,"mode":"random_beat","selected_gobo":"gobo_3","highpoint_only":true,"shake_enabled":true,"shake_mood_threshold":0.74})");
+            R"({"action":"set_gobo_control","enabled":true,"mode":"random_beat","selected_gobo":"cloverleaf","highpoint_only":true,"shake_enabled":true,"shake_mood_threshold":0.74})");
         if (!command || !std::holds_alternative<lightengine::SetGoboControlCommand>(*command)) {
             std::cerr << "set_gobo_control command was not parsed\n";
             return 1;
         }
         const auto gobo = std::get<lightengine::SetGoboControlCommand>(*command);
-        if (!gobo.enabled || gobo.mode != "random_beat" || gobo.selected_gobo != "gobo_3" || !gobo.highpoint_only || !gobo.shake_enabled ||
+        if (!gobo.enabled || gobo.mode != "random_beat" || gobo.selected_gobo != "cloverleaf" || !gobo.highpoint_only || !gobo.shake_enabled ||
             gobo.shake_mood_threshold < 0.73 || gobo.shake_mood_threshold > 0.75) {
             std::cerr << "set_gobo_control command contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
+        const std::optional<lightengine::ControlCommand> command = lightengine::parse_control_command(
+            R"({"action":"set_color_wheel","enabled":true,"use_raw_value":true,"selected_color":"cyan","raw_value":37})");
+        if (!command || !std::holds_alternative<lightengine::SetColorWheelCommand>(*command)) {
+            std::cerr << "set_color_wheel command was not parsed\n";
+            return 1;
+        }
+        const auto color = std::get<lightengine::SetColorWheelCommand>(*command);
+        if (!color.enabled || !color.use_raw_value || color.selected_color != "cyan" || color.raw_value != 37) {
+            std::cerr << "set_color_wheel command contains wrong values\n";
             return 1;
         }
     }
@@ -305,7 +329,7 @@ int main() {
             std::cerr << "SimpleEngine enabled ArtNet output before Start\n";
             return 1;
         }
-        if (stopped_frame.at(50) != 85 || stopped_frame.at(52) != 179 || stopped_frame.at(56) != 0 ||
+        if (stopped_frame.at(50) != 85 || stopped_frame.at(52) != 179 || stopped_frame.at(55) != 18 || stopped_frame.at(56) != 0 ||
             stopped_frame.at(57) != 0 || stopped_frame.at(58) != 150) {
             std::cerr << "SimpleEngine did not park moving heads with closed shutter while stopped\n";
             return 1;
@@ -353,10 +377,16 @@ int main() {
         }
         engine.apply_control_command(lightengine::SetLayerCommand{lightengine::LayerId::motion, true});
         engine.apply_control_command(lightengine::SetGoboControlCommand{
-            true, "static", "gobo_3", false, false, 0.62});
+            true, "static", "cloverleaf", false, false, 0.62});
         const lightengine::DmxFrame gobo_frame = engine.render_frame(now);
         if (engine.state_json(now).find(R"("motion":true)") == std::string::npos || gobo_frame.at(55) != 26) {
             std::cerr << "SimpleEngine did not render the selected manual gobo\n";
+            return 1;
+        }
+        engine.apply_control_command(lightengine::SetColorWheelCommand{true, true, "white", 37});
+        if (engine.render_frame(now).at(54) != 37 ||
+            engine.state_json(now).find(R"("raw_value":37)") == std::string::npos) {
+            std::cerr << "SimpleEngine did not render the manual color-wheel raw value\n";
             return 1;
         }
         const std::string state = engine.state_json(now);

@@ -11,3 +11,4 @@ else()
 endif()
 
 add_test(NAME lightengine.application COMMAND lightengine_tests)
+set_tests_properties(lightengine.application PROPERTIES WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")

@@ -5,6 +5,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
+#include <string>
 #include <vector>
 
 namespace lightengine {
@@ -58,6 +60,25 @@ struct Zkymzl11Look final {
     std::uint8_t dimmer{};
     std::uint8_t movement_speed{150};
     std::uint8_t reset{};
+};
+
+struct FixtureWheelSlot final {
+    std::string id;
+    std::string label;
+    std::uint8_t value{};
+};
+
+struct Zkymzl11Profile final {
+    std::vector<FixtureWheelSlot> colors;
+    std::vector<FixtureWheelSlot> gobos;
+    std::uint8_t color_test_min{};
+    std::uint8_t color_test_max{127};
+    std::uint8_t color_test_step{1};
+    std::uint8_t color_test_default{3};
+
+    [[nodiscard]] static Zkymzl11Profile load_from_file(const std::string& path);
+    [[nodiscard]] std::optional<std::uint8_t> color_value(const std::string& id) const;
+    [[nodiscard]] std::optional<std::uint8_t> gobo_value(const std::string& id) const;
 };
 
 class Zkymzl11MovingHead final {

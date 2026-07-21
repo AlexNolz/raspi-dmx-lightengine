@@ -17,13 +17,6 @@ std::uint8_t to_dmx(const double value) {
     return static_cast<std::uint8_t>(std::lround(clamp01(value) * 255.0));
 }
 
-std::uint8_t gobo_value(const std::string& name) {
-    constexpr std::array<const char*, 8> names{"open", "gobo_1", "gobo_2", "gobo_3", "gobo_4", "gobo_5", "gobo_6", "gobo_7"};
-    constexpr std::array<std::uint8_t, 8> values{0, 10, 18, 26, 34, 42, 50, 58};
-    const auto item = std::find(names.begin(), names.end(), name);
-    return item == names.end() ? 0 : values.at(static_cast<std::size_t>(std::distance(names.begin(), item)));
-}
-
 std::string json_bool(const bool value) {
     return value ? "true" : "false";
 }
@@ -49,6 +42,17 @@ void set_enabled(std::vector<std::string>& values, const std::string& value, con
     }
 }
 
+void wheel_slots_json(std::ostringstream& out, const std::vector<FixtureWheelSlot>& slots) {
+    out << '{';
+    for (std::size_t index = 0; index < slots.size(); ++index) {
+        if (index != 0U) {
+            out << ',';
+        }
+        out << '"' << slots.at(index).id << R"(":")" << slots.at(index).label << '"';
+    }
+    out << '}';
+}
+
 }  // namespace
 
 SimpleEngine::SimpleEngine(SimpleEngineConfig config)
@@ -58,6 +62,7 @@ SimpleEngine::SimpleEngine(SimpleEngineConfig config)
       bar2_{DmxAddress{config_.bar2_start}, config_.segments_per_bar} {
     rgb_scenes_.load_palettes_from_file("shows/color_palettes.json");
     rgb_scenes_.load_scene_definitions_from_file("shows/rgb_scenes.json");
+    moving_head_profile_ = Zkymzl11Profile::load_from_file("fixtures/zkymzl_11ch_moving_head.json");
 }
 
 void SimpleEngine::apply_os2l_event(const Os2lEvent& event, const std::chrono::steady_clock::time_point received_at) {
@@ -160,6 +165,14 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
                 gobo_shake_enabled_ = typed_command.shake_enabled;
                 gobo_shake_mood_threshold_ = typed_command.shake_mood_threshold;
                 preset_ = "custom";
+            } else if constexpr (std::is_same_v<Command, SetColorWheelCommand>) {
+                manual_color_enabled_ = typed_command.enabled;
+                manual_color_use_raw_ = typed_command.use_raw_value;
+                selected_color_ = typed_command.selected_color;
+                manual_color_value_ = static_cast<std::uint8_t>(std::clamp(
+                    static_cast<int>(typed_command.raw_value),
+                    static_cast<int>(moving_head_profile_.color_test_min),
+                    static_cast<int>(moving_head_profile_.color_test_max)));
             } else if constexpr (std::is_same_v<Command, SetArtNetCommand>) {
                 config_.artnet_host = typed_command.host.empty() ? std::string{"127.0.0.1"} : typed_command.host;
                 config_.artnet_universe = typed_command.universe;
@@ -335,6 +348,14 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(,"shake_enabled":)" << json_bool(gobo_shake_enabled_)
         << R"(,"shake_mood_threshold":)" << gobo_shake_mood_threshold_
         << R"(})"
+        << R"(,"color_wheel":{"enabled":)" << json_bool(manual_color_enabled_)
+        << R"(,"use_raw_value":)" << json_bool(manual_color_use_raw_)
+        << R"(,"selected_color":")" << selected_color_
+        << R"(","raw_value":)" << static_cast<int>(manual_color_value_)
+        << R"(,"test_min":)" << static_cast<int>(moving_head_profile_.color_test_min)
+        << R"(,"test_max":)" << static_cast<int>(moving_head_profile_.color_test_max)
+        << R"(,"test_step":)" << static_cast<int>(moving_head_profile_.color_test_step)
+        << R"(})"
         << R"(,"enabled_effects":)";
     json_string_array(out, active_effects_);
     out << R"(,"enabled_motion_scenes":)";
@@ -361,7 +382,10 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
     out << R"(,"motion_modes":{"auto":"Auto","center":"Mitte / Gobo-Test","center_pulse":"Mitte Pulse","point_chase":"Punkt Chase","line_sweep":"Links/Rechts Sweep","depth_sweep":"Vorne/Hinten Sweep","cross_pairs":"2 Links / 2 Rechts","split_strobe":"Links/Rechts Strobe","x_cross":"X Cross","color_fan":"Color Fan","pair_random":"Paare Random"})";
     out << R"(,"motion_scenes":{"mh_center_pulse":"MH Center Pulse","mh_cross_sweep":"MH Cross Sweep","mh_rave_hits":"MH Rave Hits"})";
     out << R"(,"gobo_modes":{"static":"Manuell","beat_step":"Beat Step","random_beat":"Zufällig auf Beat","phrase_random":"Zufällig pro Phrase"})";
-    out << R"(,"gobos":{"open":"Offen","gobo_1":"Gobo 1","gobo_2":"Gobo 2","gobo_3":"Gobo 3","gobo_4":"Gobo 4","gobo_5":"Gobo 5","gobo_6":"Gobo 6","gobo_7":"Gobo 7"})";
+    out << R"(,"gobos":)";
+    wheel_slots_json(out, moving_head_profile_.gobos);
+    out << R"(,"moving_head_colors":)";
+    wheel_slots_json(out, moving_head_profile_.colors);
     out << R"(,"presets":["lounge","club","rave","game_show","rgb_hard","custom"],"show":{},"preview":[)";
     for (std::size_t index = 0; index < preview_.size(); ++index) {
         if (index != 0) {
@@ -396,17 +420,18 @@ bool SimpleEngine::output_active() const {
 }
 
 void SimpleEngine::render_safe_moving_head_blackout(DmxFrame& frame) const {
+    Zkymzl11Look park;
+    park.color_wheel = moving_head_profile_.color_value("white").value_or(moving_head_profile_.color_test_default);
+    park.gobo = moving_head_profile_.gobo_value("open").value_or(0);
     for (const std::uint16_t start_address : moving_head_starts_) {
         if (start_address > dmx_channel_count - 10U) {
             continue;
         }
-        Zkymzl11MovingHead{DmxAddress{start_address}}.render_to(frame, Zkymzl11Look{});
+        Zkymzl11MovingHead{DmxAddress{start_address}}.render_to(frame, park);
     }
 }
 
 void SimpleEngine::render_moving_heads(DmxFrame& frame, const BeatSnapshot& beat) const {
-    constexpr std::array<std::uint8_t, 8> colors{3, 11, 18, 25, 70, 80, 90, 100};
-    constexpr std::array<std::uint8_t, 8> gobos{0, 10, 18, 26, 34, 42, 50, 58};
     const double mood = static_cast<double>(mood_) / 100.0;
     const double beat_hit = std::exp(-beat.phase * (3.0 + mood * 6.0));
 
@@ -450,27 +475,36 @@ void SimpleEngine::render_moving_heads(DmxFrame& frame, const BeatSnapshot& beat
         }
 
         const auto color_step = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 8);
-        look.color_wheel = colors.at((color_step + index / 2U) % colors.size());
+        look.color_wheel = moving_head_profile_.colors.at(
+            (color_step + index / 2U) % moving_head_profile_.colors.size()).value;
+        if (manual_color_enabled_) {
+            look.color_wheel = manual_color_use_raw_
+                ? manual_color_value_
+                : moving_head_profile_.color_value(selected_color_).value_or(look.color_wheel);
+        }
 
-        std::uint8_t selected_gobo = 0;
+        std::uint8_t selected_gobo = moving_head_profile_.gobo_value("open").value_or(0);
         if (gobo_enabled_) {
             if (gobo_mode_ == "static") {
-                selected_gobo = gobo_value(selected_gobo_);
+                selected_gobo = moving_head_profile_.gobo_value(selected_gobo_).value_or(selected_gobo);
             } else if (gobo_mode_ == "phrase_random") {
                 const auto phrase = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 16);
-                selected_gobo = gobos.at((phrase * 5U + index * 3U) % gobos.size());
+                selected_gobo = moving_head_profile_.gobos.at(
+                    (phrase * 5U + index * 3U) % moving_head_profile_.gobos.size()).value;
             } else if (gobo_mode_ == "random_beat") {
                 const auto step = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position));
-                selected_gobo = gobos.at((step * 5U + index * 3U + 1U) % gobos.size());
+                selected_gobo = moving_head_profile_.gobos.at(
+                    (step * 5U + index * 3U + 1U) % moving_head_profile_.gobos.size()).value;
             } else {
                 const auto step = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 2);
-                selected_gobo = gobos.at((step + index) % gobos.size());
+                selected_gobo = moving_head_profile_.gobos.at((step + index) % moving_head_profile_.gobos.size()).value;
             }
             const bool highpoint = beat.strength >= 0.75 || (beat.position % 16 >= 0 && beat.position % 16 < 4);
             if (gobo_highpoint_only_ && !highpoint) {
-                selected_gobo = 0;
+                selected_gobo = moving_head_profile_.gobo_value("open").value_or(0);
             }
-            if (gobo_shake_enabled_ && selected_gobo > 0U && mood >= gobo_shake_mood_threshold_) {
+            const std::uint8_t open_gobo = moving_head_profile_.gobo_value("open").value_or(0);
+            if (gobo_shake_enabled_ && selected_gobo != open_gobo && mood >= gobo_shake_mood_threshold_) {
                 selected_gobo = static_cast<std::uint8_t>(std::min(127, static_cast<int>(selected_gobo) + 64));
             }
         }

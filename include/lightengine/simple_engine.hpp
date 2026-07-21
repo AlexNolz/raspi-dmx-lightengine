@@ -66,6 +66,8 @@ private:
     bool gobo_enabled_{false};
     bool gobo_highpoint_only_{false};
     bool gobo_shake_enabled_{false};
+    bool manual_color_enabled_{false};
+    bool manual_color_use_raw_{false};
     double master_{1.0};
     double led_master_{1.0};
     double motion_master_{1.0};
@@ -77,6 +79,8 @@ private:
     std::string motion_mode_{"auto"};
     std::string gobo_mode_{"beat_step"};
     std::string selected_gobo_{"open"};
+    std::string selected_color_{"white"};
+    std::uint8_t manual_color_value_{3};
     std::vector<std::string> active_effects_{"rgb_static", "rgb_beat_pulse", "rgb_comet"};
     std::string selected_effect_{"rgb_static"};
     std::vector<std::string> active_scenes_{"mh_center_pulse"};
@@ -95,6 +99,7 @@ private:
     RgbWashBar bar1_;
     RgbWashBar bar2_;
     RgbSceneMixer rgb_scenes_;
+    Zkymzl11Profile moving_head_profile_;
 };
 
 }  // namespace lightengine

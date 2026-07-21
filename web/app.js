@@ -7,6 +7,7 @@ let motionBuilt = false;
 let motionScenesBuilt = false;
 let goboModesBuilt = false;
 let gobosBuilt = false;
+let movingHeadColorsBuilt = false;
 let rigBuilt = false;
 let pendingSlider = null;
 
@@ -43,6 +44,11 @@ const goboHighpointOnly = document.querySelector("#goboHighpointOnly");
 const goboShakeEnabled = document.querySelector("#goboShakeEnabled");
 const goboShakeMood = document.querySelector("#goboShakeMood");
 const goboShakeMoodValue = document.querySelector("#goboShakeMoodValue");
+const colorWheelEnabled = document.querySelector("#colorWheelEnabled");
+const colorWheelSelect = document.querySelector("#colorWheelSelect");
+const colorWheelUseRaw = document.querySelector("#colorWheelUseRaw");
+const colorWheelRaw = document.querySelector("#colorWheelRaw");
+const colorWheelRawValue = document.querySelector("#colorWheelRawValue");
 const rigBox = document.querySelector("#rig");
 const artnetHost = document.querySelector("#artnetHost");
 const universe = document.querySelector("#universe");
@@ -123,6 +129,24 @@ function render(state) {
   goboShakeEnabled.checked = Boolean(goboConfig.shake_enabled);
   goboShakeMood.value = Math.round((goboConfig.shake_mood_threshold ?? 0.62) * 100);
   goboShakeMoodValue.textContent = goboShakeMood.value;
+  const colorWheelConfig = config.color_wheel || {};
+  if (!movingHeadColorsBuilt && state.moving_head_colors) {
+    movingHeadColorsBuilt = true;
+    colorWheelSelect.replaceChildren(...Object.entries(state.moving_head_colors).map(([key, label]) => {
+      const option = document.createElement("option");
+      option.value = key;
+      option.textContent = label;
+      return option;
+    }));
+  }
+  colorWheelEnabled.checked = Boolean(colorWheelConfig.enabled);
+  colorWheelUseRaw.checked = Boolean(colorWheelConfig.use_raw_value);
+  colorWheelSelect.value = colorWheelConfig.selected_color || "white";
+  colorWheelRaw.min = colorWheelConfig.test_min ?? 0;
+  colorWheelRaw.max = colorWheelConfig.test_max ?? 127;
+  colorWheelRaw.step = colorWheelConfig.test_step ?? 1;
+  colorWheelRaw.value = colorWheelConfig.raw_value ?? 3;
+  colorWheelRawValue.textContent = colorWheelRaw.value;
   runButton.textContent = state.running ? "Running" : "Stopped";
   runButton.classList.toggle("active", state.running);
   blackoutButton.classList.toggle("active", state.blackout);
@@ -367,6 +391,30 @@ goboShakeMood.addEventListener("input", () => {
     highpoint_only: goboHighpointOnly.checked,
     shake_enabled: goboShakeEnabled.checked,
     shake_mood_threshold: Number(goboShakeMood.value) / 100
+  });
+});
+
+function sendColorWheel() {
+  send({
+    action: "set_color_wheel",
+    enabled: colorWheelEnabled.checked,
+    use_raw_value: colorWheelUseRaw.checked,
+    selected_color: colorWheelSelect.value,
+    raw_value: Number(colorWheelRaw.value)
+  });
+}
+
+colorWheelEnabled.addEventListener("change", sendColorWheel);
+colorWheelSelect.addEventListener("change", sendColorWheel);
+colorWheelUseRaw.addEventListener("change", sendColorWheel);
+colorWheelRaw.addEventListener("input", () => {
+  colorWheelRawValue.textContent = colorWheelRaw.value;
+  queueSlider({
+    action: "set_color_wheel",
+    enabled: colorWheelEnabled.checked,
+    use_raw_value: colorWheelUseRaw.checked,
+    selected_color: colorWheelSelect.value,
+    raw_value: Number(colorWheelRaw.value)
   });
 });
 

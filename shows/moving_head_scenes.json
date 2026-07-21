@@ -46,7 +46,7 @@
       "color": { "mode": "palette_random", "every_beats": 4 },
       "gobo": {
         "mode": "beat_step",
-        "names": ["open", "gobo_1", "gobo_2", "gobo_3", "gobo_4", "gobo_5", "gobo_6", "gobo_7"],
+        "names": ["open", "spiral", "octopus", "cloverleaf", "flower_cluster", "ring_swirl", "broken_squares", "dot_grid"],
         "shake_when_mood_above": 0.62
       },
       "strobe": { "mode": "beat_pulse", "armed_only": true }

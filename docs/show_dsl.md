@@ -116,7 +116,7 @@ Gobos werden in Show-JSON über Namen angesprochen, nicht über DMX-Zahlen:
 ```json
 "gobo": {
   "mode": "beat_step",
-  "names": ["open", "gobo_1", "gobo_2", "gobo_3"],
+  "names": ["open", "spiral", "octopus", "cloverleaf"],
   "shake_when_mood_above": 0.62
 }
 ```
@@ -127,11 +127,12 @@ Die konkrete Fixture übersetzt diese Namen auf DMX-Werte:
 "gobo": {
   "channel": 6,
   "type": "wheel",
-  "open": 0,
+  "open": 18,
   "gobos": {
-    "open": 0,
-    "gobo_1": 10,
-    "gobo_2": 18
+    "spiral": 0,
+    "octopus": 10,
+    "open": 18,
+    "cloverleaf": 26
   },
   "effects": {
     "shake_offset": 64,

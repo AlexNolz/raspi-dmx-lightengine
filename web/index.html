@@ -84,7 +84,7 @@
 
         <div class="panel gobo-control">
           <h2>Gobos</h2>
-          <p class="safety-note">Zum Bestimmen der Muster: aktivieren, Modus „Manuell“, danach Gobo 1–7 einzeln auswählen.</p>
+          <p class="safety-note">Die identifizierten Muster kommen direkt aus der Fixture-JSON. Modus „Manuell“ hält die Auswahl fest.</p>
           <label class="switch-row"><input id="goboEnabled" type="checkbox"><span>Gobos aktiv</span></label>
           <label class="switch-row danger"><input id="goboHighpointOnly" type="checkbox"><span>Nur bei Hochpunkt</span></label>
           <label class="switch-row arm"><input id="goboShakeEnabled" type="checkbox"><span>Shake/Rotation erlauben</span></label>
@@ -100,6 +100,22 @@
             <span>Shake ab Mood</span>
             <input id="goboShakeMood" type="range" min="0" max="100" step="1">
             <output id="goboShakeMoodValue">62</output>
+          </label>
+        </div>
+
+        <div class="panel color-wheel-control">
+          <h2>Farbrad / Halfcolors</h2>
+          <p class="safety-note">Für Halfcolors „Rohwert testen“ aktivieren und den Wert langsam verändern. Gefundene Werte übernehmen wir danach benannt in die Fixture-JSON.</p>
+          <label class="switch-row"><input id="colorWheelEnabled" type="checkbox"><span>Manuelle Farbe aktiv</span></label>
+          <label>
+            <span>Bekannte Farbe</span>
+            <select id="colorWheelSelect"></select>
+          </label>
+          <label class="switch-row arm"><input id="colorWheelUseRaw" type="checkbox"><span>Rohwert testen</span></label>
+          <label>
+            <span>DMX-Rohwert</span>
+            <input id="colorWheelRaw" type="range" min="0" max="127" step="1" value="3">
+            <output id="colorWheelRawValue">3</output>
           </label>
         </div>
 
