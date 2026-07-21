@@ -123,6 +123,13 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
             } else if constexpr (std::is_same_v<Command, ToggleMotionSceneCommand>) {
                 set_enabled(active_scenes_, typed_command.scene, typed_command.enabled);
                 preset_ = "custom";
+            } else if constexpr (std::is_same_v<Command, SetGoboControlCommand>) {
+                gobo_enabled_ = typed_command.enabled;
+                gobo_mode_ = typed_command.mode;
+                gobo_highpoint_only_ = typed_command.highpoint_only;
+                gobo_shake_enabled_ = typed_command.shake_enabled;
+                gobo_shake_mood_threshold_ = typed_command.shake_mood_threshold;
+                preset_ = "custom";
             } else if constexpr (std::is_same_v<Command, SetHoldTriggerCommand>) {
                 if (typed_command.trigger == LiveTriggerId::blackout) {
                     blackout_held_ = typed_command.held;
@@ -218,6 +225,12 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(,"mood":)" << static_cast<int>(mood_)
         << R"(,"preset":")" << preset_
         << R"(","motion_mode":"auto")"
+        << R"(,"gobo":{"enabled":)" << json_bool(gobo_enabled_)
+        << R"(,"mode":")" << gobo_mode_
+        << R"(","highpoint_only":)" << json_bool(gobo_highpoint_only_)
+        << R"(,"shake_enabled":)" << json_bool(gobo_shake_enabled_)
+        << R"(,"shake_mood_threshold":)" << gobo_shake_mood_threshold_
+        << R"(})"
         << R"(,"enabled_effects":)";
     json_string_array(out, active_effects_);
     out << R"(,"enabled_motion_scenes":)";
@@ -240,7 +253,8 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
 
     out << R"(,"effects":)" << rgb_scenes_.effects_json();
     out << R"(,"motion_modes":{"auto":"Auto","center_pulse":"Mitte Pulse","point_chase":"Punkt Chase","line_sweep":"Links/Rechts Sweep","depth_sweep":"Vorne/Hinten Sweep","cross_pairs":"2 Links / 2 Rechts","split_strobe":"Links/Rechts Strobe","x_cross":"X Cross","color_fan":"Color Fan","pair_random":"Paare Random"})";
-    out << R"(,"motion_scenes":{"beat_drive":"Beat Drive","center_pulse":"Mitte Pulse","point_chase":"Punkt Chase","line_sweep":"Links/Rechts Sweep","depth_sweep":"Vorne/Hinten Sweep","cross_pairs":"2 Links / 2 Rechts","split_strobe":"Links/Rechts Strobe","x_cross":"X Cross","color_fan":"Color Fan","pair_random":"Paare Random"})";
+    out << R"(,"motion_scenes":{"mh_center_pulse":"MH Center Pulse","mh_cross_sweep":"MH Cross Sweep","mh_rave_hits":"MH Rave Hits"})";
+    out << R"(,"gobo_modes":{"static":"Fest","beat_step":"Beat Step","random_beat":"Zufällig auf Beat","phrase_random":"Zufällig pro Phrase"})";
     out << R"(,"presets":["lounge","club","rave","game_show","rgb_hard","custom"],"show":{},"preview":[)";
     for (std::size_t index = 0; index < preview_.size(); ++index) {
         if (index != 0) {
@@ -265,23 +279,43 @@ void SimpleEngine::apply_preset_locked(const std::string& preset) {
     if (preset == "rave") {
         mood_ = 88;
         active_effects_ = {"rgb_beat_pulse", "rgb_chase", "rgb_comet", "rgb_spark"};
-        active_scenes_ = {"beat_drive", "color_fan", "pair_random", "split_strobe", "x_cross"};
+        active_scenes_ = {"mh_cross_sweep", "mh_rave_hits"};
+        gobo_enabled_ = true;
+        gobo_mode_ = "random_beat";
+        gobo_highpoint_only_ = false;
+        gobo_shake_enabled_ = true;
     } else if (preset == "rgb_hard") {
         mood_ = 78;
         active_effects_ = {"rgb_beat_pulse", "rgb_chase", "rgb_spark"};
-        active_scenes_ = {"beat_drive", "gobo_chase", "side_pingpong", "split_strobe", "x_cross"};
+        active_scenes_ = {"mh_cross_sweep", "mh_rave_hits"};
+        gobo_enabled_ = true;
+        gobo_mode_ = "beat_step";
+        gobo_highpoint_only_ = false;
+        gobo_shake_enabled_ = true;
     } else if (preset == "lounge") {
         mood_ = 35;
         active_effects_ = {"rgb_static", "rgb_beat_pulse"};
-        active_scenes_ = {"beat_drive", "center_pulse"};
+        active_scenes_ = {"mh_center_pulse"};
+        gobo_enabled_ = false;
+        gobo_mode_ = "static";
+        gobo_highpoint_only_ = false;
+        gobo_shake_enabled_ = false;
     } else if (preset == "game_show") {
         mood_ = 66;
         active_effects_ = {"rgb_static", "rgb_chase", "rgb_spark"};
-        active_scenes_ = {"beat_drive", "cross_pairs", "line_sweep"};
+        active_scenes_ = {"mh_center_pulse", "mh_cross_sweep"};
+        gobo_enabled_ = true;
+        gobo_mode_ = "phrase_random";
+        gobo_highpoint_only_ = true;
+        gobo_shake_enabled_ = false;
     } else {
         mood_ = 58;
         active_effects_ = {"rgb_static", "rgb_beat_pulse", "rgb_comet"};
-        active_scenes_ = {"beat_drive", "center_pulse", "cross_pairs", "depth_sweep", "line_sweep", "point_chase"};
+        active_scenes_ = {"mh_center_pulse", "mh_cross_sweep"};
+        gobo_enabled_ = false;
+        gobo_mode_ = "beat_step";
+        gobo_highpoint_only_ = false;
+        gobo_shake_enabled_ = false;
         preset_ = "club";
     }
 }

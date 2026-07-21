@@ -5,6 +5,7 @@ let lastState = null;
 let effectsBuilt = false;
 let motionBuilt = false;
 let motionScenesBuilt = false;
+let goboModesBuilt = false;
 let rigBuilt = false;
 let pendingSlider = null;
 
@@ -34,6 +35,12 @@ const blackoutButton = document.querySelector("#blackoutButton");
 const effectsBox = document.querySelector("#effects");
 const motionBox = document.querySelector("#motionModes");
 const motionScenesBox = document.querySelector("#motionScenes");
+const goboEnabled = document.querySelector("#goboEnabled");
+const goboMode = document.querySelector("#goboMode");
+const goboHighpointOnly = document.querySelector("#goboHighpointOnly");
+const goboShakeEnabled = document.querySelector("#goboShakeEnabled");
+const goboShakeMood = document.querySelector("#goboShakeMood");
+const goboShakeMoodValue = document.querySelector("#goboShakeMoodValue");
 const rigBox = document.querySelector("#rig");
 const artnetHost = document.querySelector("#artnetHost");
 const universe = document.querySelector("#universe");
@@ -88,6 +95,22 @@ function render(state) {
   strobeMasterValue.textContent = Math.round((strobeConfig.master ?? 1) * 100);
   strobeSpeed.value = Math.round((strobeConfig.speed ?? 1) * 100);
   strobeSpeedValue.textContent = Math.round((strobeConfig.speed ?? 1) * 100);
+  const goboConfig = config.gobo || {};
+  if (!goboModesBuilt && state.gobo_modes) {
+    goboModesBuilt = true;
+    goboMode.replaceChildren(...Object.entries(state.gobo_modes).map(([key, label]) => {
+      const option = document.createElement("option");
+      option.value = key;
+      option.textContent = label;
+      return option;
+    }));
+  }
+  goboEnabled.checked = Boolean(goboConfig.enabled);
+  goboMode.value = goboConfig.mode || "beat_step";
+  goboHighpointOnly.checked = Boolean(goboConfig.highpoint_only);
+  goboShakeEnabled.checked = Boolean(goboConfig.shake_enabled);
+  goboShakeMood.value = Math.round((goboConfig.shake_mood_threshold ?? 0.62) * 100);
+  goboShakeMoodValue.textContent = goboShakeMood.value;
   runButton.textContent = state.running ? "Running" : "Stopped";
   runButton.classList.toggle("active", state.running);
   blackoutButton.classList.toggle("active", state.blackout);
@@ -303,6 +326,33 @@ strobeMaster.addEventListener("input", () => {
 strobeSpeed.addEventListener("input", () => {
   strobeSpeedValue.textContent = strobeSpeed.value;
   queueSlider({ action: "set_strobe_speed", value: Number(strobeSpeed.value) / 100 });
+});
+
+function sendGoboControl() {
+  send({
+    action: "set_gobo_control",
+    enabled: goboEnabled.checked,
+    mode: goboMode.value,
+    highpoint_only: goboHighpointOnly.checked,
+    shake_enabled: goboShakeEnabled.checked,
+    shake_mood_threshold: Number(goboShakeMood.value) / 100
+  });
+}
+
+goboEnabled.addEventListener("change", sendGoboControl);
+goboMode.addEventListener("change", sendGoboControl);
+goboHighpointOnly.addEventListener("change", sendGoboControl);
+goboShakeEnabled.addEventListener("change", sendGoboControl);
+goboShakeMood.addEventListener("input", () => {
+  goboShakeMoodValue.textContent = goboShakeMood.value;
+  queueSlider({
+    action: "set_gobo_control",
+    enabled: goboEnabled.checked,
+    mode: goboMode.value,
+    highpoint_only: goboHighpointOnly.checked,
+    shake_enabled: goboShakeEnabled.checked,
+    shake_mood_threshold: Number(goboShakeMood.value) / 100
+  });
 });
 
 runButton.addEventListener("click", () => {

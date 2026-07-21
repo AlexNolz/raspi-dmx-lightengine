@@ -81,6 +81,22 @@
 
         <div class="panel motion-scenes" id="motionScenes"></div>
 
+        <div class="panel gobo-control">
+          <h2>Gobos</h2>
+          <label class="switch-row"><input id="goboEnabled" type="checkbox"><span>Gobos aktiv</span></label>
+          <label class="switch-row danger"><input id="goboHighpointOnly" type="checkbox"><span>Nur bei Hochpunkt</span></label>
+          <label class="switch-row arm"><input id="goboShakeEnabled" type="checkbox"><span>Shake/Rotation erlauben</span></label>
+          <label>
+            <span>Modus</span>
+            <select id="goboMode"></select>
+          </label>
+          <label>
+            <span>Shake ab Mood</span>
+            <input id="goboShakeMood" type="range" min="0" max="100" step="1">
+            <output id="goboShakeMoodValue">62</output>
+          </label>
+        </div>
+
         <div class="panel effects" id="effects"></div>
 
         <div class="panel layers">

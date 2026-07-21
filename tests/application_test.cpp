@@ -208,6 +208,21 @@ int main() {
     }
 
     {
+        const std::optional<lightengine::ControlCommand> command = lightengine::parse_control_command(
+            R"({"action":"set_gobo_control","enabled":true,"mode":"random_beat","highpoint_only":true,"shake_enabled":true,"shake_mood_threshold":0.74})");
+        if (!command || !std::holds_alternative<lightengine::SetGoboControlCommand>(*command)) {
+            std::cerr << "set_gobo_control command was not parsed\n";
+            return 1;
+        }
+        const auto gobo = std::get<lightengine::SetGoboControlCommand>(*command);
+        if (!gobo.enabled || gobo.mode != "random_beat" || !gobo.highpoint_only || !gobo.shake_enabled ||
+            gobo.shake_mood_threshold < 0.73 || gobo.shake_mood_threshold > 0.75) {
+            std::cerr << "set_gobo_control command contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
         const std::optional<lightengine::ControlCommand> command =
             lightengine::parse_control_command(R"({"action":"set_master","master":5})");
         if (!command || !std::holds_alternative<lightengine::SetMasterCommand>(*command)) {

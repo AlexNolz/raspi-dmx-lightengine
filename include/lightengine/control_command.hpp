@@ -102,6 +102,14 @@ struct ToggleMotionSceneCommand final {
     bool enabled{true};
 };
 
+struct SetGoboControlCommand final {
+    bool enabled{false};
+    std::string mode{"beat_step"};
+    bool highpoint_only{false};
+    bool shake_enabled{false};
+    double shake_mood_threshold{0.62};
+};
+
 struct TriggerCommand final {
     LiveTriggerId trigger{LiveTriggerId::next};
     double seconds{0.0};
@@ -145,6 +153,7 @@ using ControlCommand = std::variant<
     ApplyPresetCommand,
     ToggleEffectCommand,
     ToggleMotionSceneCommand,
+    SetGoboControlCommand,
     TriggerCommand,
     SetHoldTriggerCommand,
     SetArtNetCommand,

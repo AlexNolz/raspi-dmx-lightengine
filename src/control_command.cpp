@@ -365,6 +365,15 @@ std::optional<ControlCommand> parse_control_command(const std::string& payload) 
             field_bool(*fields, "enabled").value_or(true),
         };
     }
+    if (action == "set_gobo_control") {
+        return SetGoboControlCommand{
+            field_bool(*fields, "enabled").value_or(false),
+            field_string(*fields, "mode").value_or("beat_step"),
+            field_bool(*fields, "highpoint_only").value_or(false),
+            field_bool(*fields, "shake_enabled").value_or(false),
+            clamp_double(field_double(*fields, "shake_mood_threshold").value_or(0.62), 0.0, 1.0),
+        };
+    }
     if (action == "trigger") {
         const auto trigger = parse_live_trigger_id(field_string(*fields, "name").value_or("next"));
         if (!trigger) {
@@ -444,6 +453,9 @@ const char* control_command_type_name(const ControlCommand& command) noexcept {
     }
     if (std::holds_alternative<ToggleMotionSceneCommand>(command)) {
         return "toggle_motion_scene";
+    }
+    if (std::holds_alternative<SetGoboControlCommand>(command)) {
+        return "set_gobo_control";
     }
     if (std::holds_alternative<TriggerCommand>(command)) {
         return "trigger";
