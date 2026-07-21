@@ -12,19 +12,34 @@
       "type": "wheel",
       "label": "Color Wheel",
       "colors": {
-        "white": 3,
-        "red": 11,
-        "cyan": 18,
-        "teal": 18,
-        "amber": 25,
-        "orange": 25,
-        "blue": 70,
-        "yellow": 80,
-        "acid": 80,
-        "green": 90,
-        "uv": 100,
-        "magenta": 100,
-        "pink": 100
+        "white": 8,
+        "red": 24,
+        "cyan": 40,
+        "teal": 40,
+        "amber": 56,
+        "orange": 56,
+        "blue": 72,
+        "yellow": 88,
+        "acid": 88,
+        "green": 104,
+        "uv": 120,
+        "magenta": 120,
+        "pink": 120
+      },
+      "ranges": {
+        "white": { "min": 0, "max": 15 },
+        "red": { "min": 16, "max": 31 },
+        "cyan": { "min": 32, "max": 47 },
+        "amber": { "min": 48, "max": 63 },
+        "blue": { "min": 64, "max": 79 },
+        "yellow": { "min": 80, "max": 95 },
+        "green": { "min": 96, "max": 111 },
+        "purple": { "min": 112, "max": 127 }
+      },
+      "rotation": {
+        "min": 128,
+        "max": 255,
+        "used_by_engine": false
       },
       "labels": {
         "white": "Weiß",
@@ -45,8 +60,9 @@
         "min": 0,
         "max": 255,
         "step": 1,
-        "default": 3
-      }
+        "default": 8
+      },
+      "notes": "Physically calibrated: fixed colors occupy 16-value ranges from 0 through 127. Values 128 through 255 rotate the color wheel and are intentionally not used by automatic scenes."
     },
     "gobo": {
       "channel": 6,

@@ -115,7 +115,7 @@ struct SetColorWheelCommand final {
     bool enabled{false};
     bool use_raw_value{false};
     std::string selected_color{"white"};
-    std::uint8_t raw_value{3};
+    std::uint8_t raw_value{8};
 };
 
 struct TriggerCommand final {

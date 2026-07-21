@@ -80,7 +80,7 @@ private:
     std::string gobo_mode_{"beat_step"};
     std::string selected_gobo_{"open"};
     std::string selected_color_{"white"};
-    std::uint8_t manual_color_value_{3};
+    std::uint8_t manual_color_value_{8};
     std::vector<std::string> active_effects_{"rgb_static", "rgb_beat_pulse", "rgb_comet"};
     std::string selected_effect_{"rgb_static"};
     std::vector<std::string> active_scenes_{"mh_center_pulse"};

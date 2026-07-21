@@ -145,7 +145,7 @@ function render(state) {
   colorWheelRaw.min = colorWheelConfig.test_min ?? 0;
   colorWheelRaw.max = colorWheelConfig.test_max ?? 255;
   colorWheelRaw.step = colorWheelConfig.test_step ?? 1;
-  colorWheelRaw.value = colorWheelConfig.raw_value ?? 3;
+  colorWheelRaw.value = colorWheelConfig.raw_value ?? 8;
   colorWheelRawValue.textContent = colorWheelRaw.value;
   runButton.textContent = state.running ? "Running" : "Stopped";
   runButton.classList.toggle("active", state.running);

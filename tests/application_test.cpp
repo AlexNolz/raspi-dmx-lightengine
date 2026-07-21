@@ -223,7 +223,11 @@ int main() {
         const lightengine::Zkymzl11Profile profile =
             lightengine::Zkymzl11Profile::load_from_file("fixtures/zkymzl_11ch_moving_head.json");
         if (profile.gobo_value("spiral") != 0 || profile.gobo_value("open") != 18 ||
-            profile.gobo_value("cloverleaf") != 26 || profile.color_test_max != 255) {
+            profile.gobo_value("cloverleaf") != 26 || profile.color_value("white") != 8 ||
+            profile.color_value("red") != 24 || profile.color_value("cyan") != 40 ||
+            profile.color_value("amber") != 56 || profile.color_value("blue") != 72 ||
+            profile.color_value("yellow") != 88 || profile.color_value("green") != 104 ||
+            profile.color_value("magenta") != 120 || profile.color_test_max != 255) {
             std::cerr << "ZKYMZL wheel mappings were not loaded from the fixture JSON\n";
             return 1;
         }

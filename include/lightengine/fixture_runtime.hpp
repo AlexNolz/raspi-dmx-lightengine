@@ -74,7 +74,7 @@ struct Zkymzl11Profile final {
     std::uint8_t color_test_min{};
     std::uint8_t color_test_max{127};
     std::uint8_t color_test_step{1};
-    std::uint8_t color_test_default{3};
+    std::uint8_t color_test_default{8};
 
     [[nodiscard]] static Zkymzl11Profile load_from_file(const std::string& path);
     [[nodiscard]] std::optional<std::uint8_t> color_value(const std::string& id) const;

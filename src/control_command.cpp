@@ -380,7 +380,7 @@ std::optional<ControlCommand> parse_control_command(const std::string& payload) 
             field_bool(*fields, "enabled").value_or(false),
             field_bool(*fields, "use_raw_value").value_or(false),
             field_string(*fields, "selected_color").value_or("white"),
-            field_u8_clamped(*fields, "raw_value", 3, 0, 255),
+            field_u8_clamped(*fields, "raw_value", 8, 0, 255),
         };
     }
     if (action == "trigger") {

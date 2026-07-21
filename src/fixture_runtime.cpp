@@ -168,7 +168,7 @@ Zkymzl11Profile Zkymzl11Profile::load_from_file(const std::string& path) {
     profile.color_test_min = integer_field(manual_test, "min", 0);
     profile.color_test_max = integer_field(manual_test, "max", 127);
     profile.color_test_step = std::max<std::uint8_t>(1, integer_field(manual_test, "step", 1));
-    profile.color_test_default = integer_field(manual_test, "default", 3);
+    profile.color_test_default = integer_field(manual_test, "default", 8);
     if (profile.colors.empty() || profile.gobos.empty()) {
         throw std::runtime_error{"moving-head fixture profile has no color or gobo wheel slots"};
     }
