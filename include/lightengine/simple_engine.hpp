@@ -8,6 +8,7 @@
 #include "lightengine/fixture_runtime.hpp"
 #include "lightengine/os2l_event.hpp"
 #include "lightengine/motion_scene.hpp"
+#include "lightengine/music_dynamics.hpp"
 #include "lightengine/project.hpp"
 #include "lightengine/rgb_scene.hpp"
 
@@ -45,7 +46,7 @@ public:
 
 private:
     void apply_preset_locked(const std::string& preset);
-    void select_next_effect_locked();
+    void select_next_effect_locked(const MusicDynamicsSnapshot* dynamics = nullptr);
     [[nodiscard]] std::string active_effect_label_locked() const;
     void render_safe_moving_head_blackout(DmxFrame& frame, bool reset_active) const;
     void render_moving_heads(
@@ -58,6 +59,7 @@ private:
     mutable std::mutex mutex_;
     SimpleEngineConfig config_;
     BeatClock beat_clock_;
+    MusicDynamicsEstimator music_dynamics_;
     bool running_{false};
     bool blackout_{false};
     bool blackout_held_{false};

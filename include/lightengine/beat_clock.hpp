@@ -12,8 +12,9 @@ struct BeatSnapshot final {
     double phase{0.0};
     std::int64_t position{};
     double bpm{120.0};
-    double strength{1.0};
+    double strength{0.5};
     bool locked_to_os2l{false};
+    bool strength_available{false};
 };
 
 class BeatClock final {
@@ -24,7 +25,8 @@ public:
 private:
     std::int64_t position_{};
     double bpm_{120.0};
-    double strength_{1.0};
+    double strength_{0.5};
+    bool strength_available_{false};
     std::chrono::steady_clock::time_point last_beat_at_{};
     bool locked_{false};
 };

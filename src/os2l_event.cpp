@@ -223,7 +223,9 @@ std::optional<Os2lEvent> parse_os2l_event(const std::string& payload) {
         Os2lBeatEvent beat{};
         beat.position = field_i64(*fields, "pos").value_or(0);
         beat.bpm = field_double(*fields, "bpm").value_or(120.0);
-        beat.strength = field_double(*fields, "strength").value_or(1.0);
+        const std::optional<double> strength = field_double(*fields, "strength");
+        beat.strength = strength.value_or(0.5);
+        beat.strength_available = strength.has_value();
         beat.changed = field_bool(*fields, "change").value_or(false);
         return beat;
     }

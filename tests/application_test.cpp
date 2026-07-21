@@ -4,6 +4,7 @@
 #include "lightengine/fixture_runtime.hpp"
 #include "lightengine/os2l_event.hpp"
 #include "lightengine/motion_scene.hpp"
+#include "lightengine/music_dynamics.hpp"
 #include "lightengine/project.hpp"
 #include "lightengine/rgb_scene.hpp"
 #include "lightengine/simple_engine.hpp"
@@ -56,8 +57,21 @@ int main() {
             return 1;
         }
         const auto beat = std::get<lightengine::Os2lBeatEvent>(*event);
-        if (beat.position != 16 || beat.bpm != 116.04 || beat.strength != 0.8 || beat.changed) {
+        if (beat.position != 16 || beat.bpm != 116.04 || beat.strength != 0.8 || beat.changed || !beat.strength_available) {
             std::cerr << "OS2L beat event contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
+        const auto event = lightengine::parse_os2l_event(R"({"evt":"beat","pos":17,"bpm":128})");
+        if (!event || !std::holds_alternative<lightengine::Os2lBeatEvent>(*event)) {
+            std::cerr << "OS2L beat without strength was not parsed\n";
+            return 1;
+        }
+        const auto beat = std::get<lightengine::Os2lBeatEvent>(*event);
+        if (beat.strength_available || beat.strength != 0.5) {
+            std::cerr << "Missing OS2L strength was incorrectly treated as maximum intensity\n";
             return 1;
         }
     }
@@ -290,14 +304,28 @@ int main() {
     {
         lightengine::BeatClock clock;
         const auto now = std::chrono::steady_clock::now();
-        clock.on_beat(lightengine::Os2lBeatEvent{32, 120.0, 0.75, false}, now);
+        clock.on_beat(lightengine::Os2lBeatEvent{32, 120.0, 0.75, false, true}, now);
         const lightengine::BeatSnapshot snapshot = clock.snapshot(now + std::chrono::milliseconds{125});
-        if (snapshot.position != 32 || snapshot.bpm != 120.0 || snapshot.strength != 0.75 || !snapshot.locked_to_os2l) {
+        if (snapshot.position != 32 || snapshot.bpm != 120.0 || snapshot.strength != 0.75 ||
+            !snapshot.locked_to_os2l || !snapshot.strength_available) {
             std::cerr << "BeatClock did not keep OS2L beat values\n";
             return 1;
         }
         if (snapshot.phase < 0.24 || snapshot.phase > 0.26) {
             std::cerr << "BeatClock phase is not synced to OS2L beat time\n";
+            return 1;
+        }
+    }
+
+    {
+        lightengine::MusicDynamicsEstimator estimator;
+        const lightengine::BeatSnapshot calm_beat{0.0, 0.0, 0, 120.0, 0.5, true, false};
+        const lightengine::BeatSnapshot peak_beat{48.0, 0.0, 48, 140.0, 0.5, true, false};
+        const auto calm = estimator.snapshot(calm_beat, 0.58, "club");
+        const auto peak = estimator.snapshot(peak_beat, 0.88, "rave");
+        if (calm.section != lightengine::MusicalSection::calm || peak.section != lightengine::MusicalSection::peak ||
+            peak.energy <= calm.energy || calm.strength_available || !peak.phrase_boundary) {
+            std::cerr << "MusicDynamicsEstimator did not produce a controlled phrase energy curve\n";
             return 1;
         }
     }
@@ -343,7 +371,8 @@ int main() {
         lightengine::MotionSceneLibrary motions;
         motions.load_from_file("shows/moving_head_scenes.json");
         const lightengine::BeatSnapshot beat{16.0, 0.0, 16, 120.0, 1.0, true};
-        if (motions.scenes().size() < 20U || motions.find("pair_random") == nullptr) {
+        if (motions.scenes().size() < 20U || motions.find("pair_random") == nullptr ||
+            !motions.find("gobo_chase")->allow_shake || motions.find("gobo_chase")->energy_min < 0.5) {
             std::cerr << "Moving-head JSON scene library is incomplete\n";
             return 1;
         }
@@ -427,7 +456,8 @@ int main() {
             return 1;
         }
         const std::string state = engine.state_json(now);
-        if (state.find(R"("beat_pos":12)") == std::string::npos || state.find(R"("os2l_connected":true)") == std::string::npos) {
+        if (state.find(R"("beat_pos":12)") == std::string::npos || state.find(R"("os2l_connected":true)") == std::string::npos ||
+            state.find(R"("music_section":")") == std::string::npos || state.find(R"("music_energy":)") == std::string::npos) {
             std::cerr << "SimpleEngine state does not expose beat sync\n";
             return 1;
         }
@@ -451,6 +481,23 @@ int main() {
         const auto reset_finished = stopping + std::chrono::seconds{7};
         if (engine.output_active(reset_finished) || engine.render_frame(reset_finished).at(59) != 0) {
             std::cerr << "SimpleEngine did not finish moving-head calibration after its hold interval\n";
+            return 1;
+        }
+    }
+
+    {
+        lightengine::SimpleEngine engine{lightengine::SimpleEngineConfig{}};
+        const auto now = std::chrono::steady_clock::now();
+        engine.apply_control_command(lightengine::SetRunningCommand{true});
+        engine.apply_control_command(lightengine::ApplyPresetCommand{"rave"});
+        engine.apply_control_command(lightengine::SetMotionModeCommand{"gobo_chase"});
+        engine.apply_os2l_event(lightengine::Os2lBeatEvent{0, 140.0, 0.5, false, false}, now);
+        const std::uint8_t calm_gobo = engine.render_frame(now).at(55);
+        engine.apply_os2l_event(lightengine::Os2lBeatEvent{48, 140.0, 0.5, false, false}, now);
+        const std::uint8_t peak_gobo = engine.render_frame(now).at(55);
+        if (calm_gobo >= 64U || peak_gobo < 64U ||
+            engine.state_json(now).find(R"("music_section":"peak")") == std::string::npos) {
+            std::cerr << "Gobo shaking was not restricted to a predicted musical peak\n";
             return 1;
         }
     }

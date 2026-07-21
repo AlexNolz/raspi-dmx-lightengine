@@ -14,6 +14,7 @@ let pendingSlider = null;
 const preview = document.querySelector("#preview");
 const os2lStatus = document.querySelector("#os2lStatus");
 const bpmStatus = document.querySelector("#bpmStatus");
+const energyStatus = document.querySelector("#energyStatus");
 const effectStatus = document.querySelector("#effectStatus");
 const targetStatus = document.querySelector("#targetStatus");
 const mood = document.querySelector("#mood");
@@ -83,6 +84,9 @@ function render(state) {
   os2lStatus.textContent = state.os2l_connected ? "OS2L live" : "OS2L wartet";
   os2lStatus.className = state.os2l_connected ? "status good" : "status bad";
   bpmStatus.textContent = `${state.bpm.toFixed(1)} BPM`;
+  const sectionLabels = { calm: "Ruhig", groove: "Groove", buildup: "Aufbau", peak: "Höhepunkt", release: "Abbau" };
+  const strengthHint = state.beat_strength_available ? " · VDJ-Dynamik" : " · Phrasenmodell";
+  energyStatus.textContent = `${sectionLabels[state.music_section] || state.music_section} ${Math.round((state.music_energy ?? 0.5) * 100)}%${strengthHint}`;
   effectStatus.textContent = state.active_effect_label;
   targetStatus.textContent = artnetTarget;
 

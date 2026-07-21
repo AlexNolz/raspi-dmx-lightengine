@@ -554,6 +554,8 @@ void RgbSceneMixer::load_scene_definitions_from_file(const std::string& path) {
         definition.palette = regex_string_field(object, "palette").value_or("club");
         definition.speed = clamp_range(regex_number_field(object, "speed").value_or(1.0), 0.05, 8.0);
         definition.intensity = clamp_range(regex_number_field(object, "intensity").value_or(1.0), 0.0, 1.0);
+        definition.energy_min = clamp_range(regex_number_field(object, "energy_min").value_or(0.0), 0.0, 1.0);
+        definition.energy_max = clamp_range(regex_number_field(object, "energy_max").value_or(1.0), 0.0, 1.0);
         if (!definition.id.empty() && !definition.type.empty()) {
             loaded.push_back(std::move(definition));
         }

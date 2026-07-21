@@ -30,6 +30,9 @@ struct MotionSceneDefinition final {
     double decay{5.0};
     double x_amount{0.3};
     double y_amount{0.2};
+    double energy_min{0.0};
+    double energy_max{1.0};
+    bool allow_shake{false};
 };
 
 struct MotionTarget final {

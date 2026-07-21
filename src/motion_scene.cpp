@@ -32,6 +32,12 @@ double number_field(const std::string& object, const std::string& key, const dou
     return std::regex_search(object, match, pattern) ? std::stod(match[1].str()) : fallback;
 }
 
+bool bool_field(const std::string& object, const std::string& key, const bool fallback) {
+    const std::regex pattern{'"' + key + R"json("\s*:\s*(true|false))json"};
+    std::smatch match;
+    return std::regex_search(object, match, pattern) ? match[1].str() == "true" : fallback;
+}
+
 std::vector<std::string> scene_objects(const std::string& text) {
     const std::size_t scenes_key = text.find("\"scenes\"");
     const std::size_t array_open = scenes_key == std::string::npos ? std::string::npos : text.find('[', scenes_key);
@@ -137,6 +143,9 @@ void MotionSceneLibrary::load_from_file(const std::string& path) {
         scene.decay = number_field(object, "decay", 5.0);
         scene.x_amount = number_field(object, "x_amount", 0.3);
         scene.y_amount = number_field(object, "y_amount", 0.2);
+        scene.energy_min = clamp01(number_field(object, "energy_min", 0.0));
+        scene.energy_max = clamp01(number_field(object, "energy_max", 1.0));
+        scene.allow_shake = bool_field(object, "allow_shake", false);
         if (!scene.id.empty() && !scene.type.empty()) {
             loaded.push_back(std::move(scene));
         }

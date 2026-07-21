@@ -38,6 +38,8 @@ struct RgbSceneDefinition final {
     std::string palette;
     double speed{1.0};
     double intensity{1.0};
+    double energy_min{0.0};
+    double energy_max{1.0};
 };
 
 class RgbScene {

@@ -17,6 +17,7 @@ void BeatClock::on_beat(const Os2lBeatEvent& beat, const std::chrono::steady_clo
     position_ = beat.position;
     bpm_ = std::max(20.0, std::min(260.0, beat.bpm));
     strength_ = clamp01(beat.strength);
+    strength_available_ = beat.strength_available;
     last_beat_at_ = received_at;
     locked_ = true;
 }
@@ -38,6 +39,7 @@ BeatSnapshot BeatClock::snapshot(const std::chrono::steady_clock::time_point now
         bpm_,
         strength_,
         locked,
+        strength_available_,
     };
 }
 

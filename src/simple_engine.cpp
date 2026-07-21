@@ -104,12 +104,19 @@ void SimpleEngine::apply_os2l_event(const Os2lEvent& event, const std::chrono::s
         [&](const auto& typed_event) {
             using Event = std::decay_t<decltype(typed_event)>;
             if constexpr (std::is_same_v<Event, Os2lBeatEvent>) {
+                if (typed_event.changed) {
+                    music_dynamics_.reset();
+                }
                 beat_clock_.on_beat(typed_event, received_at);
+                music_dynamics_.on_beat(typed_event);
                 last_music_beat_at_ = received_at;
                 const bool phrase_boundary = typed_event.position >= 0 && typed_event.position % 16 == 0 &&
                     typed_event.position != last_effect_change_position_;
                 if (typed_event.changed || phrase_boundary) {
-                    select_next_effect_locked();
+                    const BeatSnapshot current_beat = beat_clock_.snapshot(received_at);
+                    const MusicDynamicsSnapshot dynamics = music_dynamics_.snapshot(
+                        current_beat, static_cast<double>(mood_) / 100.0, preset_);
+                    select_next_effect_locked(&dynamics);
                     last_effect_change_position_ = typed_event.position;
                 }
             } else if constexpr (std::is_same_v<Event, Os2lButtonEvent>) {
@@ -283,6 +290,7 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
     bar2_.clear();
 
     const BeatSnapshot beat = beat_clock_.snapshot(now);
+    const MusicDynamicsSnapshot dynamics = music_dynamics_.snapshot(beat, static_cast<double>(mood_) / 100.0, preset_);
     if (!running_ || blackout_ || blackout_held_) {
         render_safe_moving_head_blackout(frame, !running_ && now < reset_until_);
         return frame;
@@ -332,7 +340,7 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
     }
     const RgbSceneContext scene_context{
         beat,
-        clamp01(master_ * led_master_),
+        clamp01(master_ * led_master_ * (0.72 + dynamics.energy * 0.28)),
         static_cast<double>(mood_) / 100.0,
     };
     const RgbPalette& palette = rgb_scenes_.palette_for_preset(preset_, beat.position / 16);
@@ -380,6 +388,7 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
 std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point now) const {
     std::lock_guard lock{mutex_};
     const BeatSnapshot beat = beat_clock_.snapshot(now);
+    const MusicDynamicsSnapshot dynamics = music_dynamics_.snapshot(beat, static_cast<double>(mood_) / 100.0, preset_);
     const double os2l_age = last_os2l_at_ == std::chrono::steady_clock::time_point{}
         ? -1.0
         : std::chrono::duration<double>(now - last_os2l_at_).count();
@@ -395,6 +404,10 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(,"beat_pos":)" << beat.position
         << R"(,"beat_phase":)" << beat.phase
         << R"(,"beat_strength":)" << beat.strength
+        << R"(,"beat_strength_available":)" << json_bool(beat.strength_available)
+        << R"(,"music_energy":)" << dynamics.energy
+        << R"(,"music_section":")" << musical_section_name(dynamics.section) << '"'
+        << R"(,"phrase_boundary":)" << json_bool(dynamics.phrase_boundary)
         << R"(,"last_os2l_age":)" << (os2l_age < 0.0 ? std::string{"null"} : std::to_string(os2l_age))
         << R"(,"os2l_connected":)" << json_bool(beat.locked_to_os2l)
         << R"(,"os2l_connections":)" << os2l_messages_
@@ -529,6 +542,7 @@ void SimpleEngine::render_moving_heads(
     const std::string_view scene_override) {
     const double mood = static_cast<double>(mood_) / 100.0;
     const double beat_hit = std::exp(-beat.phase * (3.0 + mood * 6.0));
+    const MusicDynamicsSnapshot dynamics = music_dynamics_.snapshot(beat, mood, preset_);
 
     std::string scene = scene_override.empty() ? motion_mode_ : std::string{scene_override};
     if (scene == "auto") {
@@ -552,12 +566,24 @@ void SimpleEngine::render_moving_heads(
             }
             std::vector<std::string> pool;
             for (const std::string& candidate : preferred) {
-                if (std::find(active_scenes_.begin(), active_scenes_.end(), candidate) != active_scenes_.end()) {
+                const MotionSceneDefinition* candidate_definition = motion_scenes_.find(candidate);
+                const bool energy_matches = candidate_definition == nullptr ||
+                    (dynamics.energy >= candidate_definition->energy_min && dynamics.energy <= candidate_definition->energy_max);
+                if (energy_matches && std::find(active_scenes_.begin(), active_scenes_.end(), candidate) != active_scenes_.end()) {
                     pool.push_back(candidate);
                 }
             }
             if (pool.empty()) {
-                pool = active_scenes_;
+                for (const std::string& candidate : active_scenes_) {
+                    const MotionSceneDefinition* candidate_definition = motion_scenes_.find(candidate);
+                    if (candidate_definition == nullptr ||
+                        (dynamics.energy >= candidate_definition->energy_min && dynamics.energy <= candidate_definition->energy_max)) {
+                        pool.push_back(candidate);
+                    }
+                }
+            }
+            if (pool.empty()) {
+                pool.push_back("center_pulse");
             }
             const auto phrase = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 16);
             scene = pool.at(phrase % pool.size());
@@ -617,12 +643,13 @@ void SimpleEngine::render_moving_heads(
                 const auto step = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 2);
                 selected_gobo = moving_head_profile_.gobos.at((step + index) % moving_head_profile_.gobos.size()).value;
             }
-            const bool highpoint = beat.strength >= 0.75 || (beat.position % 16 >= 0 && beat.position % 16 < 4);
+            const bool highpoint = dynamics.highpoint();
             if (gobo_highpoint_only_ && !highpoint) {
                 selected_gobo = moving_head_profile_.gobo_value("open").value_or(0);
             }
             const std::uint8_t open_gobo = moving_head_profile_.gobo_value("open").value_or(0);
-            if (gobo_shake_enabled_ && selected_gobo != open_gobo && mood >= gobo_shake_mood_threshold_) {
+            if (gobo_shake_enabled_ && definition != nullptr && definition->allow_shake && dynamics.highpoint() &&
+                selected_gobo != open_gobo && mood >= gobo_shake_mood_threshold_) {
                 selected_gobo = static_cast<std::uint8_t>(std::min(127, static_cast<int>(selected_gobo) + 64));
             }
         }
@@ -669,16 +696,28 @@ void SimpleEngine::render_auxiliary_fixtures(
     }
 }
 
-void SimpleEngine::select_next_effect_locked() {
+void SimpleEngine::select_next_effect_locked(const MusicDynamicsSnapshot* dynamics) {
     if (active_effects_.empty()) {
         active_effects_.push_back("breathe");
     }
     const auto current = std::find(active_effects_.begin(), active_effects_.end(), selected_effect_);
-    if (current == active_effects_.end() || std::next(current) == active_effects_.end()) {
-        selected_effect_ = active_effects_.front();
-    } else {
-        selected_effect_ = *std::next(current);
+    const std::size_t start = current == active_effects_.end()
+        ? 0U
+        : (static_cast<std::size_t>(std::distance(active_effects_.begin(), current)) + 1U) % active_effects_.size();
+    for (std::size_t offset = 0; offset < active_effects_.size(); ++offset) {
+        const std::string& candidate = active_effects_.at((start + offset) % active_effects_.size());
+        const auto definition = std::find_if(
+            rgb_scenes_.scene_definitions().begin(),
+            rgb_scenes_.scene_definitions().end(),
+            [&](const RgbSceneDefinition& scene) { return scene.id == candidate; });
+        const bool energy_matches = dynamics == nullptr || definition == rgb_scenes_.scene_definitions().end() ||
+            (dynamics->energy >= definition->energy_min && dynamics->energy <= definition->energy_max);
+        if (energy_matches) {
+            selected_effect_ = candidate;
+            return;
+        }
     }
+    selected_effect_ = active_effects_.front();
 }
 
 std::string SimpleEngine::active_effect_label_locked() const {

@@ -10,8 +10,9 @@ namespace lightengine {
 struct Os2lBeatEvent final {
     std::int64_t position{};
     double bpm{120.0};
-    double strength{1.0};
+    double strength{0.5};
     bool changed{false};
+    bool strength_available{false};
 };
 
 struct Os2lButtonEvent final {
