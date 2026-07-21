@@ -18,24 +18,38 @@
   ],
   "presets": [
     {
+      "id": "lounge",
+      "name": "Lounge",
+      "mood": 35,
+      "effects": ["rgb_amber_glow", "rgb_beat_pulse"],
+      "motion_scenes": ["center_pulse"]
+    },
+    {
       "id": "club",
       "name": "Club",
       "mood": 58,
-      "effects": ["pulse", "ball", "rainbow", "scanner", "sparkle", "comet", "gate", "fill"],
+      "effects": ["rgb_static", "rgb_beat_pulse", "rgb_comet"],
       "motion_scenes": ["center_pulse", "point_chase", "line_sweep", "depth_sweep", "cross_pairs"]
     },
     {
       "id": "rave",
       "name": "Rave",
       "mood": 88,
-      "effects": ["pulse", "rainbow", "scanner", "sparkle", "strobe", "gate", "binary", "siren"],
+      "effects": ["rgb_beat_pulse", "rgb_chase", "rgb_comet", "rgb_spark"],
       "motion_scenes": ["split_strobe", "x_cross", "color_fan", "pair_random"]
+    },
+    {
+      "id": "game_show",
+      "name": "Game Show",
+      "mood": 66,
+      "effects": ["rgb_static", "rgb_chase", "rgb_spark"],
+      "motion_scenes": ["cross_pairs", "line_sweep"]
     },
     {
       "id": "rgb_hard",
       "name": "Pure RGB",
       "mood": 78,
-      "effects": ["pulse", "scanner", "blocks", "comet", "gate", "binary"],
+      "effects": ["rgb_beat_pulse", "rgb_chase", "rgb_spark"],
       "motion_scenes": ["split_strobe", "gobo_chase", "side_pingpong", "x_cross"]
     }
   ],
@@ -43,7 +57,7 @@
     {
       "id": "beat_drive",
       "name": "Beat Drive",
-      "effects": ["pulse", "scanner", "comet"],
+      "effects": ["rgb_beat_pulse", "rgb_comet"],
       "motion_scenes": ["center_pulse", "point_chase"]
     }
   ]

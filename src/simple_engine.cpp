@@ -48,7 +48,9 @@ SimpleEngine::SimpleEngine(SimpleEngineConfig config)
     : config_{std::move(config)},
       preview_(static_cast<std::size_t>(config_.segments_per_bar) * 2U),
       bar1_{DmxAddress{config_.bar1_start}, config_.segments_per_bar},
-      bar2_{DmxAddress{config_.bar2_start}, config_.segments_per_bar} {}
+      bar2_{DmxAddress{config_.bar2_start}, config_.segments_per_bar} {
+    rgb_scenes_.load_scene_definitions_from_file("shows/rgb_scenes.json");
+}
 
 void SimpleEngine::apply_os2l_event(const Os2lEvent& event, const std::chrono::steady_clock::time_point received_at) {
     std::lock_guard lock{mutex_};
@@ -235,7 +237,7 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(,"master":)" << strobe_master_ << R"(,"speed":)" << strobe_speed_
         << R"(},"fog":{"name":"unused","start":1,"channels":1,"enabled":false,"armed":false}}})";
 
-    out << R"(,"effects":{"rgb_static":"Static Glow","rgb_beat_pulse":"Beat Pulse","rgb_chase":"Chase","rgb_comet":"Comet","rgb_spark":"Beat Spark"})";
+    out << R"(,"effects":)" << rgb_scenes_.effects_json();
     out << R"(,"motion_modes":{"auto":"Auto","center_pulse":"Mitte Pulse","point_chase":"Punkt Chase","line_sweep":"Links/Rechts Sweep","depth_sweep":"Vorne/Hinten Sweep","cross_pairs":"2 Links / 2 Rechts","split_strobe":"Links/Rechts Strobe","x_cross":"X Cross","color_fan":"Color Fan","pair_random":"Paare Random"})";
     out << R"(,"motion_scenes":{"beat_drive":"Beat Drive","center_pulse":"Mitte Pulse","point_chase":"Punkt Chase","line_sweep":"Links/Rechts Sweep","depth_sweep":"Vorne/Hinten Sweep","cross_pairs":"2 Links / 2 Rechts","split_strobe":"Links/Rechts Strobe","x_cross":"X Cross","color_fan":"Color Fan","pair_random":"Paare Random"})";
     out << R"(,"presets":["lounge","club","rave","game_show","rgb_hard","custom"],"show":{},"preview":[)";

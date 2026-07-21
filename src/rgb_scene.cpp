@@ -2,6 +2,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
+#include <fstream>
+#include <iterator>
+#include <regex>
+#include <sstream>
 #include <string_view>
 
 namespace lightengine {
@@ -57,7 +62,7 @@ double beat_hit(const BeatSnapshot& beat, const double sharpness) {
 class StaticGlowScene final : public RgbScene {
 public:
     [[nodiscard]] std::string_view id() const override {
-        return "rgb_static";
+        return "static_glow";
     }
 
     void render(RgbWashBar& bar, const RgbSceneContext& context, const RgbPalette& palette) const override {
@@ -72,7 +77,7 @@ public:
 class BeatPulseScene final : public RgbScene {
 public:
     [[nodiscard]] std::string_view id() const override {
-        return "rgb_beat_pulse";
+        return "beat_pulse";
     }
 
     void render(RgbWashBar& bar, const RgbSceneContext& context, const RgbPalette& palette) const override {
@@ -89,7 +94,7 @@ public:
 class ChaseScene final : public RgbScene {
 public:
     [[nodiscard]] std::string_view id() const override {
-        return "rgb_chase";
+        return "chase";
     }
 
     void render(RgbWashBar& bar, const RgbSceneContext& context, const RgbPalette& palette) const override {
@@ -104,7 +109,7 @@ public:
 class CometScene final : public RgbScene {
 public:
     [[nodiscard]] std::string_view id() const override {
-        return "rgb_comet";
+        return "comet";
     }
 
     void render(RgbWashBar& bar, const RgbSceneContext& context, const RgbPalette& palette) const override {
@@ -121,7 +126,7 @@ public:
 class BeatSparkScene final : public RgbScene {
 public:
     [[nodiscard]] std::string_view id() const override {
-        return "rgb_spark";
+        return "beat_spark";
     }
 
     void render(RgbWashBar& bar, const RgbSceneContext& context, const RgbPalette& palette) const override {
@@ -136,6 +141,44 @@ public:
     }
 };
 
+std::optional<std::string> regex_string_field(const std::string& object, const std::string& field) {
+    const std::regex pattern{"\"" + field + "\"\\s*:\\s*\"([^\"]*)\""};
+    std::smatch match;
+    if (std::regex_search(object, match, pattern)) {
+        return match.str(1);
+    }
+    return std::nullopt;
+}
+
+std::optional<double> regex_number_field(const std::string& object, const std::string& field) {
+    const std::regex pattern{"\"" + field + R"("\s*:\s*(-?[0-9]+(?:\.[0-9]+)?))"};
+    std::smatch match;
+    if (!std::regex_search(object, match, pattern)) {
+        return std::nullopt;
+    }
+    char* end = nullptr;
+    const double value = std::strtod(match.str(1).c_str(), &end);
+    if (end == match.str(1).c_str()) {
+        return std::nullopt;
+    }
+    return value;
+}
+
+double clamp_range(const double value, const double low, const double high) {
+    return std::max(low, std::min(high, value));
+}
+
+std::vector<RgbSceneDefinition> default_scene_definitions() {
+    return {
+        {"rgb_static", "Static Glow", "static_glow", "club", 0.65, 0.55},
+        {"rgb_beat_pulse", "Beat Pulse", "beat_pulse", "club", 1.0, 0.85},
+        {"rgb_chase", "Chase", "chase", "rave", 1.0, 0.7},
+        {"rgb_comet", "Comet", "comet", "deep_blue", 1.0, 0.75},
+        {"rgb_spark", "Beat Spark", "beat_spark", "rave", 1.0, 0.85},
+        {"rgb_amber_glow", "Amber Glow", "static_glow", "amber", 0.45, 0.5},
+    };
+}
+
 }  // namespace
 
 RgbSceneMixer::RgbSceneMixer()
@@ -145,7 +188,8 @@ RgbSceneMixer::RgbSceneMixer()
           {"rgb_hard", "Hard RGB", {Rgb{255, 0, 0}, Rgb{0, 255, 0}, Rgb{0, 0, 255}, Rgb{255, 255, 255}}},
           {"deep_blue", "Deep Blue", {Rgb{0, 20, 120}, Rgb{0, 120, 255}, Rgb{80, 0, 180}, Rgb{0, 255, 200}}},
           {"amber", "Warm Amber", {Rgb{255, 80, 0}, Rgb{255, 150, 20}, Rgb{255, 35, 10}, Rgb{255, 220, 90}}},
-      } {
+      },
+      scene_definitions_{default_scene_definitions()} {
     scenes_.push_back(std::make_unique<StaticGlowScene>());
     scenes_.push_back(std::make_unique<BeatPulseScene>());
     scenes_.push_back(std::make_unique<ChaseScene>());
@@ -159,6 +203,10 @@ const std::vector<std::unique_ptr<RgbScene>>& RgbSceneMixer::scenes() const {
 
 const std::vector<RgbPalette>& RgbSceneMixer::palettes() const {
     return palettes_;
+}
+
+const std::vector<RgbSceneDefinition>& RgbSceneMixer::scene_definitions() const {
+    return scene_definitions_;
 }
 
 const RgbPalette& RgbSceneMixer::palette_for_preset(const std::string_view preset) const {
@@ -187,18 +235,71 @@ const RgbPalette& RgbSceneMixer::palette_by_id(const std::string_view id) const 
     return palettes_.front();
 }
 
+std::string RgbSceneMixer::effects_json() const {
+    std::ostringstream out;
+    out << '{';
+    for (std::size_t index = 0; index < scene_definitions_.size(); ++index) {
+        if (index != 0) {
+            out << ',';
+        }
+        const RgbSceneDefinition& definition = scene_definitions_.at(index);
+        out << '"' << definition.id << R"(":")" << definition.label << '"';
+    }
+    out << '}';
+    return out.str();
+}
+
+void RgbSceneMixer::load_scene_definitions_from_file(const std::string& path) {
+    std::ifstream file{path};
+    if (!file) {
+        return;
+    }
+
+    const std::string text{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
+    const std::regex object_pattern{R"(\{[^{}]*"id"\s*:\s*"[^"]+"[^{}]*\})"};
+    std::vector<RgbSceneDefinition> loaded;
+    for (auto current = std::sregex_iterator{text.begin(), text.end(), object_pattern}; current != std::sregex_iterator{}; ++current) {
+        const std::string object = current->str();
+        RgbSceneDefinition definition;
+        definition.id = regex_string_field(object, "id").value_or("");
+        definition.label = regex_string_field(object, "name").value_or(definition.id);
+        definition.type = regex_string_field(object, "type").value_or("");
+        definition.palette = regex_string_field(object, "palette").value_or("club");
+        definition.speed = clamp_range(regex_number_field(object, "speed").value_or(1.0), 0.05, 8.0);
+        definition.intensity = clamp_range(regex_number_field(object, "intensity").value_or(1.0), 0.0, 1.0);
+        if (!definition.id.empty() && !definition.type.empty()) {
+            loaded.push_back(std::move(definition));
+        }
+    }
+
+    if (!loaded.empty()) {
+        scene_definitions_ = std::move(loaded);
+    }
+}
+
 void RgbSceneMixer::render(
     RgbWashBar& bar,
     const std::vector<std::string>& active_scene_ids,
     const RgbSceneContext& context,
     const RgbPalette& palette) const {
-    for (const std::string& scene_id : active_scene_ids) {
-        const auto found = std::find_if(scenes_.begin(), scenes_.end(), [&](const std::unique_ptr<RgbScene>& scene) {
-            return scene->id() == scene_id;
+    for (const std::string& definition_id : active_scene_ids) {
+        const auto definition = std::find_if(scene_definitions_.begin(), scene_definitions_.end(), [&](const RgbSceneDefinition& item) {
+            return item.id == definition_id;
         });
-        if (found != scenes_.end()) {
+        if (definition == scene_definitions_.end()) {
+            continue;
+        }
+
+        const auto renderer = std::find_if(scenes_.begin(), scenes_.end(), [&](const std::unique_ptr<RgbScene>& scene) {
+            return scene->id() == definition->type;
+        });
+        if (renderer != scenes_.end()) {
+            RgbSceneContext scene_context = context;
+            scene_context.master *= definition->intensity;
+            scene_context.beat.beat *= definition->speed;
+            const RgbPalette& scene_palette = definition->palette.empty() ? palette : palette_by_id(definition->palette);
             RgbWashBar layer{DmxAddress{1}, static_cast<std::uint8_t>(bar.size())};
-            (*found)->render(layer, context, palette);
+            (*renderer)->render(layer, scene_context, scene_palette);
             for (std::size_t segment = 0; segment < bar.size(); ++segment) {
                 bar.set_wash(segment, add_saturating(bar.wash_color(segment), layer.wash_color(segment)));
             }

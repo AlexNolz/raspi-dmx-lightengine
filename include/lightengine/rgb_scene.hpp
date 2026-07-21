@@ -6,7 +6,9 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace lightengine {
@@ -23,6 +25,15 @@ struct RgbSceneContext final {
     double mood{0.5};
 };
 
+struct RgbSceneDefinition final {
+    std::string id;
+    std::string label;
+    std::string type;
+    std::string palette;
+    double speed{1.0};
+    double intensity{1.0};
+};
+
 class RgbScene {
 public:
     virtual ~RgbScene() = default;
@@ -37,8 +48,12 @@ public:
 
     [[nodiscard]] const std::vector<std::unique_ptr<RgbScene>>& scenes() const;
     [[nodiscard]] const std::vector<RgbPalette>& palettes() const;
+    [[nodiscard]] const std::vector<RgbSceneDefinition>& scene_definitions() const;
     [[nodiscard]] const RgbPalette& palette_for_preset(std::string_view preset) const;
     [[nodiscard]] const RgbPalette& palette_by_id(std::string_view id) const;
+    [[nodiscard]] std::string effects_json() const;
+
+    void load_scene_definitions_from_file(const std::string& path);
 
     void render(
         RgbWashBar& bar,
@@ -49,6 +64,7 @@ public:
 private:
     std::vector<std::unique_ptr<RgbScene>> scenes_;
     std::vector<RgbPalette> palettes_;
+    std::vector<RgbSceneDefinition> scene_definitions_;
 };
 
 }  // namespace lightengine
