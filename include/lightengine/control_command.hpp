@@ -12,6 +12,11 @@ enum class OutputMasterTarget {
     motion,
 };
 
+enum class BeatPulseTarget {
+    led,
+    motion,
+};
+
 enum class LayerId {
     led_bars,
     motion,
@@ -78,6 +83,11 @@ struct SetFixtureArmedCommand final {
 
 struct SetStrobeBeatPulseCommand final {
     bool enabled{false};
+};
+
+struct SetBeatPulseCommand final {
+    BeatPulseTarget target{BeatPulseTarget::led};
+    bool enabled{true};
 };
 
 struct SetStrobeMasterCommand final {
@@ -156,6 +166,7 @@ using ControlCommand = std::variant<
     SetMotionModeCommand,
     SetFixtureArmedCommand,
     SetStrobeBeatPulseCommand,
+    SetBeatPulseCommand,
     SetStrobeMasterCommand,
     SetStrobeSpeedCommand,
     ApplyPresetCommand,
@@ -171,6 +182,7 @@ using ControlCommand = std::variant<
 
 [[nodiscard]] std::optional<ControlCommand> parse_control_command(const std::string& payload);
 [[nodiscard]] std::optional<OutputMasterTarget> parse_output_master_target(const std::string& value);
+[[nodiscard]] std::optional<BeatPulseTarget> parse_beat_pulse_target(const std::string& value);
 [[nodiscard]] std::optional<LayerId> parse_layer_id(const std::string& value);
 [[nodiscard]] std::optional<ArmedFixtureId> parse_armed_fixture_id(const std::string& value);
 [[nodiscard]] std::optional<LiveTriggerId> parse_live_trigger_id(const std::string& value);

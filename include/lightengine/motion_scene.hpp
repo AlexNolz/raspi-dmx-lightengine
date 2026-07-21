@@ -54,7 +54,8 @@ public:
         std::size_t fixture_count,
         const BeatSnapshot& beat,
         double mood,
-        std::uint64_t seed) const;
+        std::uint64_t seed,
+        bool beat_pulse_enabled = true) const;
     [[nodiscard]] std::string labels_json() const;
 
 private:

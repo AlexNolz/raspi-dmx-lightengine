@@ -172,12 +172,13 @@ MotionTarget MotionSceneLibrary::evaluate(
     const std::size_t fixture_count,
     const BeatSnapshot& beat,
     const double mood,
-    const std::uint64_t seed) const {
+    const std::uint64_t seed,
+    const bool beat_pulse_enabled) const {
     const double speed = lerp(scene.speed_low, scene.speed_high, mood);
     const double step_beats = std::max(1.0, lerp(scene.step_low, scene.step_high, mood));
     const std::size_t step = static_cast<std::size_t>(std::max(0.0, std::floor(beat.beat / step_beats)));
     const std::size_t pair = fixture_index / 2U;
-    const double hit = std::exp(-beat.phase * scene.decay);
+    const double hit = beat_pulse_enabled ? std::exp(-beat.phase * scene.decay) : 0.0;
     MotionTarget target;
 
     if (scene.type == "fixed") {

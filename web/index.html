@@ -52,6 +52,7 @@
         <div class="panel output-control">
           <h2>LED Bars</h2>
           <label class="switch-row"><input id="ledEnabled" type="checkbox"><span>LED Bars eingeschaltet</span></label>
+          <label class="switch-row"><input id="ledBeatPulse" type="checkbox"><span>Beatpuls erlauben</span></label>
           <label>
             <span>Helligkeit</span>
             <input id="ledMaster" type="range" min="0" max="100" step="1">
@@ -63,6 +64,7 @@
           <h2>Moving Heads</h2>
           <p class="safety-note">Beim Stoppen bleiben Pan/Tilt geparkt; Dimmer und Shutter schließen.</p>
           <label class="switch-row"><input id="motionEnabled" type="checkbox"><span>Moving Heads eingeschaltet</span></label>
+          <label class="switch-row"><input id="motionBeatPulse" type="checkbox"><span>Dimmer-Beatpuls erlauben</span></label>
           <label>
             <span>Helligkeit</span>
             <input id="motionMaster" type="range" min="0" max="100" step="1">
@@ -71,7 +73,7 @@
         </div>
 
         <div class="panel presets">
-          <button data-preset="lounge">Lounge</button>
+          <button data-preset="warmup">Warm-up / Classics</button>
           <button data-preset="club">Club</button>
           <button data-preset="rave">Rave</button>
           <button data-preset="game_show">Game Show</button>

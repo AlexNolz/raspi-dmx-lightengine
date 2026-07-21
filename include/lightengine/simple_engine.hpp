@@ -72,6 +72,7 @@ private:
     bool strobe_armed_{false};
     bool fog_armed_{false};
     bool strobe_beat_pulse_{false};
+    bool motion_beat_pulse_enabled_{true};
     bool gobo_enabled_{false};
     bool gobo_highpoint_only_{false};
     bool gobo_shake_enabled_{false};

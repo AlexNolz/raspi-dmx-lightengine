@@ -193,6 +193,20 @@ int main() {
     }
 
     {
+        const auto command = lightengine::parse_control_command(
+            R"({"action":"set_beat_pulse","target":"motion","enabled":false})");
+        if (!command || !std::holds_alternative<lightengine::SetBeatPulseCommand>(*command)) {
+            std::cerr << "set_beat_pulse command was not parsed\n";
+            return 1;
+        }
+        const auto pulse = std::get<lightengine::SetBeatPulseCommand>(*command);
+        if (pulse.target != lightengine::BeatPulseTarget::motion || pulse.enabled) {
+            std::cerr << "set_beat_pulse command contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
         const std::optional<lightengine::ControlCommand> command =
             lightengine::parse_control_command(R"({"action":"set_hold_trigger","name":"blackout","held":true})");
         if (!command || !std::holds_alternative<lightengine::SetHoldTriggerCommand>(*command)) {
@@ -499,15 +513,72 @@ int main() {
         lightengine::SimpleEngine engine{lightengine::SimpleEngineConfig{}};
         const auto now = std::chrono::steady_clock::now();
         engine.apply_control_command(lightengine::SetRunningCommand{true});
+        engine.apply_control_command(lightengine::ApplyPresetCommand{"warmup"});
+        engine.apply_control_command(lightengine::SetMotionModeCommand{"center_pulse"});
+        engine.apply_os2l_event(lightengine::Os2lBeatEvent{1, 112.0, 0.5, false, false}, now);
+        const lightengine::DmxFrame pulse_on = engine.render_frame(now);
+        engine.apply_control_command(lightengine::SetBeatPulseCommand{lightengine::BeatPulseTarget::motion, false});
+        const lightengine::DmxFrame pulse_off = engine.render_frame(now);
+        engine.apply_control_command(lightengine::SetBeatPulseCommand{lightengine::BeatPulseTarget::led, true});
+        const std::string pulse_state = engine.state_json(now);
+        if (pulse_off.at(57) >= pulse_on.at(57) ||
+            pulse_state.find(R"("motion_beat_pulse":false)") == std::string::npos ||
+            pulse_state.find(R"("led_beat_pulse":true)") == std::string::npos) {
+            std::cerr << "Independent LED and moving-head beat pulse controls did not apply\n";
+            return 1;
+        }
+
+        engine.apply_os2l_event(lightengine::Os2lBeatEvent{0, 112.0, 0.5, false, false}, now);
+        const std::uint8_t gobo_at_zero = engine.render_frame(now).at(55);
+        engine.apply_os2l_event(lightengine::Os2lBeatEvent{8, 112.0, 0.5, false, false}, now);
+        const std::uint8_t gobo_at_eight = engine.render_frame(now).at(55);
+        engine.apply_os2l_event(lightengine::Os2lBeatEvent{16, 112.0, 0.5, false, false}, now);
+        const std::uint8_t gobo_at_sixteen = engine.render_frame(now).at(55);
+        if (gobo_at_zero != gobo_at_eight || gobo_at_sixteen == gobo_at_zero) {
+            std::cerr << "Musical gobo mode did not hold calm patterns for sixteen beats\n";
+            return 1;
+        }
+
+        engine.apply_control_command(lightengine::ApplyPresetCommand{"warmup"});
+        engine.apply_os2l_event(lightengine::Os2lBeatEvent{1, 112.0, 0.5, false, false}, now);
+        const lightengine::DmxFrame coordinated = engine.render_frame(now);
+        if (coordinated.at(2) < 130U || coordinated.at(54) != 56U) {
+            std::cerr << "Warm-up LED flood and moving-head palette colors were not coordinated: LED="
+                      << static_cast<int>(coordinated.at(2)) << " head=" << static_cast<int>(coordinated.at(54)) << '\n';
+            return 1;
+        }
+    }
+
+    {
+        lightengine::SimpleEngine engine{lightengine::SimpleEngineConfig{}};
+        const auto now = std::chrono::steady_clock::now();
+        engine.apply_control_command(lightengine::SetRunningCommand{true});
         engine.apply_control_command(lightengine::ApplyPresetCommand{"rave"});
         engine.apply_control_command(lightengine::SetMotionModeCommand{"gobo_chase"});
         engine.apply_os2l_event(lightengine::Os2lBeatEvent{0, 140.0, 0.5, false, false}, now);
         const std::uint8_t calm_gobo = engine.render_frame(now).at(55);
         engine.apply_os2l_event(lightengine::Os2lBeatEvent{48, 140.0, 0.5, false, false}, now);
         const std::uint8_t peak_gobo = engine.render_frame(now).at(55);
-        if (calm_gobo >= 64U || peak_gobo < 64U ||
+        engine.apply_os2l_event(lightengine::Os2lBeatEvent{49, 140.0, 0.5, false, false}, now);
+        const std::uint8_t next_peak_gobo = engine.render_frame(now).at(55);
+        if (calm_gobo >= 64U || peak_gobo < 64U || next_peak_gobo < 64U || next_peak_gobo == peak_gobo ||
             engine.state_json(now).find(R"("music_section":"peak")") == std::string::npos) {
             std::cerr << "Gobo shaking was not restricted to a predicted musical peak\n";
+            return 1;
+        }
+    }
+
+    {
+        lightengine::SimpleEngine engine{lightengine::SimpleEngineConfig{}};
+        const auto now = std::chrono::steady_clock::now();
+        engine.apply_control_command(lightengine::SetRunningCommand{true});
+        engine.apply_control_command(lightengine::ApplyPresetCommand{"hardstyle"});
+        engine.apply_os2l_event(lightengine::Os2lBeatEvent{32, 155.0, 0.5, false, false}, now);
+        const std::string buildup = engine.state_json(now);
+        if (buildup.find(R"("music_section":"buildup")") == std::string::npos ||
+            buildup.find(R"("active_effect":"peak_blocks")") != std::string::npos ||
+            buildup.find(R"("active_effect":"strobe")") != std::string::npos) {
+            std::cerr << "Hardstyle buildup selected an effect reserved for the absolute peak\n";
             return 1;
         }
     }

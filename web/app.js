@@ -26,7 +26,9 @@ const ledMasterValue = document.querySelector("#ledMasterValue");
 const motionMaster = document.querySelector("#motionMaster");
 const motionMasterValue = document.querySelector("#motionMasterValue");
 const ledEnabled = document.querySelector("#ledEnabled");
+const ledBeatPulse = document.querySelector("#ledBeatPulse");
 const motionEnabled = document.querySelector("#motionEnabled");
+const motionBeatPulse = document.querySelector("#motionBeatPulse");
 const strobeArmed = document.querySelector("#strobeArmed");
 const strobeBeatPulse = document.querySelector("#strobeBeatPulse");
 const strobeMaster = document.querySelector("#strobeMaster");
@@ -100,7 +102,9 @@ function render(state) {
   motionMasterValue.textContent = Math.round((config.motion_master ?? 1) * 100);
   const strobeConfig = (config.fixtures && config.fixtures.strobe) || {};
   ledEnabled.checked = Boolean(config.layers && config.layers.led_bars);
+  ledBeatPulse.checked = Boolean(config.led_beat_pulse);
   motionEnabled.checked = Boolean(config.layers && config.layers.motion);
+  motionBeatPulse.checked = Boolean(config.motion_beat_pulse);
   strobeArmed.checked = Boolean(strobeConfig.armed);
   strobeBeatPulse.checked = Boolean(strobeConfig.beat_pulse);
   strobeMaster.value = Math.round((strobeConfig.master ?? 1) * 100);
@@ -346,8 +350,16 @@ ledEnabled.addEventListener("change", () => {
   send({ action: "set_layer", layer: "led_bars", enabled: ledEnabled.checked });
 });
 
+ledBeatPulse.addEventListener("change", () => {
+  send({ action: "set_beat_pulse", target: "led", enabled: ledBeatPulse.checked });
+});
+
 motionEnabled.addEventListener("change", () => {
   send({ action: "set_layer", layer: "motion", enabled: motionEnabled.checked });
+});
+
+motionBeatPulse.addEventListener("change", () => {
+  send({ action: "set_beat_pulse", target: "motion", enabled: motionBeatPulse.checked });
 });
 
 strobeArmed.addEventListener("change", () => {

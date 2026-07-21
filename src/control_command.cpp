@@ -231,6 +231,16 @@ std::optional<OutputMasterTarget> parse_output_master_target(const std::string& 
     return std::nullopt;
 }
 
+std::optional<BeatPulseTarget> parse_beat_pulse_target(const std::string& value) {
+    if (value == "led") {
+        return BeatPulseTarget::led;
+    }
+    if (value == "motion") {
+        return BeatPulseTarget::motion;
+    }
+    return std::nullopt;
+}
+
 std::optional<LayerId> parse_layer_id(const std::string& value) {
     if (value == "led_bars") {
         return LayerId::led_bars;
@@ -344,6 +354,13 @@ std::optional<ControlCommand> parse_control_command(const std::string& payload) 
     if (action == "set_strobe_beat_pulse") {
         return SetStrobeBeatPulseCommand{field_bool(*fields, "enabled").value_or(false)};
     }
+    if (action == "set_beat_pulse") {
+        const auto target = parse_beat_pulse_target(field_string(*fields, "target").value_or(""));
+        if (!target) {
+            return UnknownControlCommand{action, payload};
+        }
+        return SetBeatPulseCommand{*target, field_bool(*fields, "enabled").value_or(true)};
+    }
     if (action == "set_strobe_master") {
         return SetStrobeMasterCommand{field_unit_interval(*fields, "value", 1.0)};
     }
@@ -447,6 +464,9 @@ const char* control_command_type_name(const ControlCommand& command) noexcept {
     }
     if (std::holds_alternative<SetStrobeBeatPulseCommand>(command)) {
         return "set_strobe_beat_pulse";
+    }
+    if (std::holds_alternative<SetBeatPulseCommand>(command)) {
+        return "set_beat_pulse";
     }
     if (std::holds_alternative<SetStrobeMasterCommand>(command)) {
         return "set_strobe_master";

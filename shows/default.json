@@ -18,11 +18,11 @@
   ],
   "presets": [
     {
-      "id": "lounge",
-      "name": "Lounge",
-      "mood": 24,
-      "effects": ["breathe", "pulse", "ball", "pair_swap", "comet", "fill"],
-      "motion_scenes": ["center", "center_pulse", "depth_sweep", "pair_orbit"]
+      "id": "warmup",
+      "name": "Warm-up / Charts / Classics",
+      "mood": 38,
+      "effects": ["warm_flood", "nostalgia_glow"],
+      "motion_scenes": ["center", "front", "classics_slow_fan", "depth_sweep"]
     },
     {
       "id": "club",

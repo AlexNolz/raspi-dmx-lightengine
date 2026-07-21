@@ -149,7 +149,7 @@ std::string demo_state_json() {
     "depth_sweep": "Vorne/Hinten Sweep",
     "cross_pairs": "2 Links / 2 Rechts"
   },
-  "presets": ["lounge", "club", "rave", "game_show", "rgb_hard", "custom"],
+  "presets": ["warmup", "club", "rave", "game_show", "rgb_hard", "edm", "techno", "hardstyle", "ballermann", "custom"],
   "show": {},
   "preview": [
     {"r":255,"g":0,"b":0},{"r":255,"g":80,"b":0},{"r":255,"g":180,"b":0},{"r":0,"g":255,"b":40},

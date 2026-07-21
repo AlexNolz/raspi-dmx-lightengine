@@ -154,6 +154,9 @@ public:
                 const double position = (std::sin(context.beat.beat * 0.72) + 1.0) * 0.5 * static_cast<double>(pair_count - 1U);
                 level = 0.06 + std::exp(-std::abs(static_cast<double>(pair_segment) - position) * 1.45) * 0.90;
                 color = palette_color(palette, step / 4U);
+            } else if (scene_id_ == "solid_flood") {
+                color = palette_color(palette, step / 16U + pair_segment / 2U);
+                level = 0.78;
             } else if (scene_id_ == "pair_swap") {
                 const bool alternate = ((segment / 2U) + step / 2U) % 2U != 0U;
                 color = palette_color(palette, alternate ? 1U : 0U);
@@ -428,7 +431,7 @@ RgbSceneMixer::RgbSceneMixer()
           {"amber_warm", "Warm Amber", {"orange", "amber", "red", "yellow"}, resolve_named_colors({"orange", "amber", "red", "yellow"})},
       },
       preset_palette_sets_{
-          {"lounge", {"amber_warm"}},
+          {"warmup", {"amber_warm"}},
           {"club", {"club_blue_amber", "club_teal_pink", "deep_blue"}},
           {"rave", {"rave_neon", "rave_acid", "rgb_hard"}},
           {"game_show", {"deep_blue", "club_blue_amber"}},
@@ -440,7 +443,7 @@ RgbSceneMixer::RgbSceneMixer()
     scenes_.push_back(std::make_unique<ChaseScene>());
     scenes_.push_back(std::make_unique<CometScene>());
     scenes_.push_back(std::make_unique<BeatSparkScene>());
-    for (const char* pattern : {"ball", "pair_swap", "rainbow", "scanner", "sparkle", "split", "blocks", "strobe", "quad_strobe",
+    for (const char* pattern : {"ball", "solid_flood", "pair_swap", "rainbow", "scanner", "sparkle", "split", "blocks", "strobe", "quad_strobe",
              "breathe", "theater", "zipper", "orbit", "traffic", "gate", "binary", "fill", "siren"}) {
         scenes_.push_back(std::make_unique<PatternScene>(pattern));
     }

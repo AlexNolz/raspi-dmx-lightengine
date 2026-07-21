@@ -12,8 +12,8 @@ double clamp01(const double value) {
 }
 
 double preset_bias(const std::string_view preset) {
-    if (preset == "lounge") {
-        return 0.20;
+    if (preset == "warmup") {
+        return 0.32;
     }
     if (preset == "rave") {
         return 0.90;

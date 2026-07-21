@@ -184,6 +184,15 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
                 }
             } else if constexpr (std::is_same_v<Command, SetStrobeBeatPulseCommand>) {
                 strobe_beat_pulse_ = typed_command.enabled;
+            } else if constexpr (std::is_same_v<Command, SetBeatPulseCommand>) {
+                if (typed_command.target == BeatPulseTarget::led) {
+                    set_enabled(active_effects_, "pulse", typed_command.enabled);
+                    if (!typed_command.enabled && selected_effect_ == "pulse") {
+                        select_next_effect_locked();
+                    }
+                } else {
+                    motion_beat_pulse_enabled_ = typed_command.enabled;
+                }
             } else if constexpr (std::is_same_v<Command, SetStrobeMasterCommand>) {
                 strobe_master_ = typed_command.value;
             } else if constexpr (std::is_same_v<Command, SetStrobeSpeedCommand>) {
@@ -428,6 +437,8 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(,"master":)" << master_
         << R"(,"led_master":)" << led_master_
         << R"(,"motion_master":)" << motion_master_
+        << R"(,"led_beat_pulse":)" << json_bool(std::find(active_effects_.begin(), active_effects_.end(), "pulse") != active_effects_.end())
+        << R"(,"motion_beat_pulse":)" << json_bool(motion_beat_pulse_enabled_)
         << R"(,"mood":)" << static_cast<int>(mood_)
         << R"(,"preset":")" << preset_
         << R"(","motion_mode":")" << motion_mode_ << '"'
@@ -476,7 +487,7 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
     }
     out << "}";
     out << R"(,"motion_scenes":)" << motion_labels;
-    out << R"(,"gobo_modes":{"static":"Manuell","beat_step":"Beat Step","random_beat":"Zufällig auf Beat","phrase_random":"Zufällig pro Phrase"})";
+    out << R"(,"gobo_modes":{"musical":"Musikalisch: ruhig bis Peak","static":"Manuell","beat_step":"Beat Step","random_beat":"Zufällig auf Beat","phrase_random":"Zufällig pro Phrase"})";
     out << R"(,"gobos":)";
     wheel_slots_json(out, moving_head_profile_.gobos);
     out << R"(,"moving_head_colors":)";
@@ -546,7 +557,7 @@ void SimpleEngine::render_moving_heads(
     const std::chrono::steady_clock::time_point now,
     const std::string_view scene_override) {
     const double mood = static_cast<double>(mood_) / 100.0;
-    const double beat_hit = std::exp(-beat.phase * (3.0 + mood * 6.0));
+    const double beat_hit = motion_beat_pulse_enabled_ ? std::exp(-beat.phase * (3.0 + mood * 6.0)) : 0.0;
     const MusicDynamicsSnapshot dynamics = music_dynamics_.snapshot(beat, mood, preset_);
 
     std::string scene = scene_override.empty() ? motion_mode_ : std::string{scene_override};
@@ -612,7 +623,8 @@ void SimpleEngine::render_moving_heads(
         Zkymzl11Look look;
         const MotionTarget target = definition == nullptr
             ? MotionTarget{}
-            : motion_scenes_.evaluate(*definition, index, moving_head_starts_.size(), beat, mood, 0x4c49474854ULL);
+            : motion_scenes_.evaluate(
+                  *definition, index, moving_head_starts_.size(), beat, mood, 0x4c49474854ULL, motion_beat_pulse_enabled_);
         const double pan_width = moving_head_profile_.pan_width - target.y * 0.03;
         const double pan = std::clamp(
             moving_head_profile_.pan_center + (target.x - 0.5) * pan_width,
@@ -626,9 +638,20 @@ void SimpleEngine::render_moving_heads(
         look.tilt = to_dmx(tilt);
         const double level = (0.41 + mood * 0.53 + beat_hit * (0.06 + mood * 0.25)) * target.dimmer_scale;
 
-        const auto color_step = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 8);
-        look.color_wheel = moving_head_profile_.colors.at(
-            (color_step + index / 2U) % moving_head_profile_.colors.size()).value;
+        const RgbPalette& head_palette = rgb_scenes_.palette_for_preset(preset_, beat.position / 16);
+        const std::int64_t color_hold_beats = dynamics.highpoint() ? 2 :
+            dynamics.section == MusicalSection::buildup ? 8 : 16;
+        const auto color_step = static_cast<std::size_t>(
+            std::max<std::int64_t>(0, beat.position) / color_hold_beats);
+        if (!head_palette.color_names.empty()) {
+            const std::string& color_name = head_palette.color_names.at(
+                (color_step + index / 2U) % head_palette.color_names.size());
+            look.color_wheel = moving_head_profile_.color_value(color_name).value_or(
+                moving_head_profile_.colors.at((color_step + index / 2U) % moving_head_profile_.colors.size()).value);
+        } else {
+            look.color_wheel = moving_head_profile_.colors.at(
+                (color_step + index / 2U) % moving_head_profile_.colors.size()).value;
+        }
         if (manual_color_enabled_) {
             look.color_wheel = manual_color_use_raw_
                 ? manual_color_value_
@@ -639,6 +662,13 @@ void SimpleEngine::render_moving_heads(
         if (gobo_enabled_) {
             if (gobo_mode_ == "static") {
                 selected_gobo = moving_head_profile_.gobo_value(selected_gobo_).value_or(selected_gobo);
+            } else if (gobo_mode_ == "musical") {
+                const std::int64_t hold_beats = dynamics.highpoint() ? 1 :
+                    dynamics.section == MusicalSection::buildup ? 8 : 16;
+                const auto step = static_cast<std::size_t>(
+                    std::max<std::int64_t>(0, beat.position) / hold_beats);
+                selected_gobo = moving_head_profile_.gobos.at(
+                    (step * 5U + (index / 2U) * 3U) % moving_head_profile_.gobos.size()).value;
             } else if (gobo_mode_ == "phrase_random") {
                 const auto phrase = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 16);
                 selected_gobo = moving_head_profile_.gobos.at(
@@ -762,32 +792,13 @@ void SimpleEngine::apply_preset_locked(const std::string& preset) {
     mood_ = definition->mood;
     active_effects_ = definition->effects.empty() ? std::vector<std::string>{"breathe"} : definition->effects;
     active_scenes_ = definition->motion_scenes.empty() ? std::vector<std::string>{"center_pulse"} : definition->motion_scenes;
-    if (preset_ == "rave" || preset_ == "hardstyle") {
-        gobo_enabled_ = true;
-        gobo_mode_ = "random_beat";
-        gobo_highpoint_only_ = false;
-        gobo_shake_enabled_ = true;
-    } else if (preset_ == "rgb_hard" || preset_ == "techno") {
-        gobo_enabled_ = true;
-        gobo_mode_ = "beat_step";
-        gobo_highpoint_only_ = false;
-        gobo_shake_enabled_ = true;
-    } else if (preset_ == "lounge") {
-        gobo_enabled_ = false;
-        gobo_mode_ = "static";
-        gobo_highpoint_only_ = false;
-        gobo_shake_enabled_ = false;
-    } else if (preset_ == "game_show" || preset_ == "edm") {
-        gobo_enabled_ = true;
-        gobo_mode_ = "phrase_random";
-        gobo_highpoint_only_ = true;
-        gobo_shake_enabled_ = false;
-    } else {
-        gobo_enabled_ = false;
-        gobo_mode_ = "beat_step";
-        gobo_highpoint_only_ = false;
-        gobo_shake_enabled_ = false;
-    }
+    gobo_enabled_ = true;
+    gobo_mode_ = "musical";
+    gobo_highpoint_only_ = false;
+    const bool intense_preset = preset_ == "rave" || preset_ == "hardstyle" || preset_ == "techno" || preset_ == "rgb_hard";
+    gobo_shake_enabled_ = intense_preset;
+    gobo_shake_mood_threshold_ = intense_preset ? 0.82 : 1.0;
+    motion_beat_pulse_enabled_ = true;
     selected_effect_ = active_effects_.front();
 }
 

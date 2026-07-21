@@ -55,10 +55,15 @@
       "id": "ballermann_party",
       "name": "Ballermann Party",
       "colors": ["red", "yellow", "blue", "green"]
+    },
+    {
+      "id": "warmup_classics",
+      "name": "Warm-up Saturated Classics",
+      "colors": ["amber", "magenta", "blue", "red"]
     }
   ],
   "preset_palettes": [
-    { "id": "lounge", "palettes": ["amber_warm"] },
+    { "id": "warmup", "palettes": ["warmup_classics", "amber_warm", "deep_blue"] },
     { "id": "club", "palettes": ["club_blue_amber", "club_teal_pink", "deep_blue"] },
     { "id": "rave", "palettes": ["rave_neon", "rave_acid", "rgb_hard"] },
     { "id": "game_show", "palettes": ["deep_blue", "club_blue_amber"] },
