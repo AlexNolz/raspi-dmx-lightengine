@@ -40,7 +40,7 @@ public:
 
 private:
     void apply_preset_locked(const std::string& preset);
-    void render_parked_moving_heads(DmxFrame& frame, bool output_enabled) const;
+    void render_safe_moving_head_blackout(DmxFrame& frame) const;
 
     mutable std::mutex mutex_;
     SimpleEngineConfig config_;
@@ -52,7 +52,7 @@ private:
     bool color_strobe_held_{false};
     bool strobe_out_held_{false};
     bool led_layer_enabled_{true};
-    bool motion_layer_enabled_{true};
+    bool motion_layer_enabled_{false};
     bool strobe_armed_{false};
     bool strobe_beat_pulse_{false};
     bool gobo_enabled_{false};

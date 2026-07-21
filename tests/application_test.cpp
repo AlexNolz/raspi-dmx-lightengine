@@ -289,8 +289,8 @@ int main() {
         lightengine::SimpleEngine engine{lightengine::SimpleEngineConfig{}};
         const auto now = std::chrono::steady_clock::now();
         const lightengine::DmxFrame stopped_frame = engine.render_frame(now);
-        if (stopped_frame.at(50) != 85 || stopped_frame.at(52) != 176 || stopped_frame.at(58) != 140) {
-            std::cerr << "SimpleEngine did not park moving heads while stopped\n";
+        if (stopped_frame.at(50) != 0 || stopped_frame.at(52) != 0 || stopped_frame.at(58) != 0) {
+            std::cerr << "SimpleEngine did not keep moving heads blacked out while stopped\n";
             return 1;
         }
         engine.apply_control_command(lightengine::SetRunningCommand{true});
@@ -298,6 +298,10 @@ int main() {
         const lightengine::DmxFrame frame = engine.render_frame(now);
         if (frame.at(2) == 0 && frame.at(3) == 0 && frame.at(4) == 0) {
             std::cerr << "SimpleEngine did not render LED bar DMX values while running\n";
+            return 1;
+        }
+        if (frame.at(50) != 0 || frame.at(51) != 0 || frame.at(52) != 0 || frame.at(58) != 0) {
+            std::cerr << "SimpleEngine moved moving-head channels before the renderer is ready\n";
             return 1;
         }
         const std::string state = engine.state_json(now);

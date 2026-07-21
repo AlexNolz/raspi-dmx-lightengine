@@ -163,7 +163,7 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
     std::fill(preview_.begin(), preview_.end(), Rgb{});
     bar1_.clear();
     bar2_.clear();
-    render_parked_moving_heads(frame, running_ && !blackout_ && !blackout_held_ && motion_layer_enabled_);
+    render_safe_moving_head_blackout(frame);
 
     if (!running_ || blackout_ || blackout_held_ || !led_layer_enabled_) {
         return frame;
@@ -296,30 +296,13 @@ ArtNetEndpoint SimpleEngine::artnet_endpoint() const {
     };
 }
 
-void SimpleEngine::render_parked_moving_heads(DmxFrame& frame, const bool output_enabled) const {
+void SimpleEngine::render_safe_moving_head_blackout(DmxFrame& frame) const {
     constexpr std::array<std::uint16_t, 4> starts{51, 62, 73, 84};
-    constexpr std::uint8_t pan_center = 85;
-    constexpr std::uint8_t tilt_front = 176;
-    constexpr std::uint8_t color_white = 3;
-    constexpr std::uint8_t gobo_open = 0;
-    constexpr std::uint8_t shutter_open = 10;
-    constexpr std::uint8_t motor_speed_safe = 140;
-
-    const std::uint8_t dimmer = output_enabled ? to_dmx(master_ * motion_master_ * 0.15) : 0;
-    const std::uint8_t shutter = dimmer > 0 ? shutter_open : 0;
     for (const std::uint16_t start_address : starts) {
         const std::size_t start = DmxAddress{start_address}.zero_based();
-        frame.at(start + 0U) = pan_center;
-        frame.at(start + 1U) = 0;
-        frame.at(start + 2U) = tilt_front;
-        frame.at(start + 3U) = 0;
-        frame.at(start + 4U) = color_white;
-        frame.at(start + 5U) = gobo_open;
-        frame.at(start + 6U) = shutter;
-        frame.at(start + 7U) = dimmer;
-        frame.at(start + 8U) = motor_speed_safe;
-        frame.at(start + 9U) = 0;
-        frame.at(start + 10U) = 0;
+        for (std::size_t offset = 0; offset < 11U; ++offset) {
+            frame.at(start + offset) = 0;
+        }
     }
 }
 
