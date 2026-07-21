@@ -365,6 +365,16 @@ int main() {
                 return 1;
             }
         }
+        lightengine::RgbWashBar grouped_bar{lightengine::DmxAddress{1}, 8};
+        mixer.render(grouped_bar, {"rainbow"}, context, mixer.palette_for_preset("hardstyle"));
+        for (std::size_t segment = 0; segment < grouped_bar.size(); segment += 2U) {
+            const lightengine::Rgb first = grouped_bar.wash_color(segment);
+            const lightengine::Rgb second = grouped_bar.wash_color(segment + 1U);
+            if (first.r != second.r || first.g != second.g || first.b != second.b) {
+                std::cerr << "RGB scenes did not keep adjacent LED segments in strong two-segment groups\n";
+                return 1;
+            }
+        }
     }
 
     {
@@ -503,10 +513,56 @@ int main() {
     }
 
     {
+        lightengine::SimpleEngine engine{lightengine::SimpleEngineConfig{}};
+        const auto now = std::chrono::steady_clock::now();
+        engine.apply_control_command(lightengine::SetRunningCommand{true});
+        engine.apply_control_command(lightengine::ApplyPresetCommand{"techno"});
+        engine.apply_control_command(lightengine::SetMotionModeCommand{"techno_left_right"});
+        engine.apply_os2l_event(lightengine::Os2lBeatEvent{0, 138.0, 0.5, false, false}, now);
+        const lightengine::DmxFrame left_beat = engine.render_frame(now);
+        engine.apply_os2l_event(lightengine::Os2lBeatEvent{1, 138.0, 0.5, false, false}, now);
+        const lightengine::DmxFrame right_beat = engine.render_frame(now);
+        if (left_beat.at(57) == 0U || left_beat.at(68) == 0U || left_beat.at(79) != 0U || left_beat.at(90) != 0U ||
+            right_beat.at(57) != 0U || right_beat.at(68) != 0U || right_beat.at(79) == 0U || right_beat.at(90) == 0U) {
+            std::cerr << "Techno moving-head scene did not alternate two left/two right heads on full beats\n";
+            return 1;
+        }
+
+        engine.apply_os2l_event(lightengine::Os2lBeatEvent{48, 138.0, 0.5, false, false}, now);
+        const lightengine::DmxFrame automatic_peak = engine.render_frame(now);
+        std::size_t automatic_peak_lit = 0;
+        for (std::size_t segment = 0; segment < 8U; ++segment) {
+            const std::size_t channel = 2U + segment * 3U;
+            if (automatic_peak.at(channel) != 0U || automatic_peak.at(channel + 1U) != 0U || automatic_peak.at(channel + 2U) != 0U) {
+                ++automatic_peak_lit;
+            }
+        }
+        if (engine.state_json(now).find(R"("active_effect":"peak_blocks")") == std::string::npos || automatic_peak_lit != 4U) {
+            std::cerr << "Intense Techno peak did not select the automatic four-segment strobe\n";
+            return 1;
+        }
+
+        engine.apply_control_command(lightengine::SetHoldTriggerCommand{lightengine::LiveTriggerId::color_strobe, true});
+        const lightengine::DmxFrame color_strobe = engine.render_frame(std::chrono::steady_clock::now());
+        std::size_t lit_segments = 0;
+        for (std::size_t segment = 0; segment < 8U; ++segment) {
+            const std::size_t channel = 2U + segment * 3U;
+            if (color_strobe.at(channel) != 0U || color_strobe.at(channel + 1U) != 0U || color_strobe.at(channel + 2U) != 0U) {
+                ++lit_segments;
+            }
+        }
+        if (lit_segments != 4U) {
+            std::cerr << "Color Strobe did not flash one large four-segment block\n";
+            return 1;
+        }
+        engine.apply_control_command(lightengine::SetHoldTriggerCommand{lightengine::LiveTriggerId::color_strobe, false});
+    }
+
+    {
         const lightengine::ShowProject loaded = lightengine::load_show_project_from_file("shows/default.json");
-        if (loaded.id != "default" || loaded.patch.size() != 7U || loaded.presets.size() != 5U ||
+        if (loaded.id != "default" || loaded.patch.size() != 7U || loaded.presets.size() != 9U ||
             loaded.presets.at(1).id != "club" || loaded.presets.at(1).effects.size() < 10U ||
-            loaded.presets.at(1).motion_scenes.size() < 8U) {
+            loaded.presets.at(1).motion_scenes.size() < 8U || loaded.presets.at(6).id != "techno") {
             std::cerr << "Show project loader did not load patch and preset scene collections\n";
             return 1;
         }

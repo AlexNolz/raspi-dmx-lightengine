@@ -51,6 +51,34 @@
       "mood": 78,
       "effects": ["pulse", "scanner", "blocks", "comet", "theater", "gate", "binary", "fill"],
       "motion_scenes": ["split_strobe", "gobo_chase", "side_pingpong", "x_cross", "color_fan", "pair_random"]
+    },
+    {
+      "id": "edm",
+      "name": "EDM",
+      "mood": 70,
+      "effects": ["pulse", "ball", "pair_swap", "pair_punch", "rainbow", "scanner", "split", "comet", "orbit", "fill"],
+      "motion_scenes": ["center_pulse", "point_chase", "line_sweep", "depth_sweep", "color_fan", "pair_orbit", "edm_fan_pulse"]
+    },
+    {
+      "id": "techno",
+      "name": "Techno",
+      "mood": 82,
+      "effects": ["pulse", "pair_swap", "pair_punch", "scanner", "blocks", "comet", "gate", "binary", "peak_blocks"],
+      "motion_scenes": ["techno_left_right", "techno_cross_hits", "cross_pairs", "line_sweep", "side_pingpong", "x_cross", "gobo_chase"]
+    },
+    {
+      "id": "hardstyle",
+      "name": "Hardstyle / Gabber",
+      "mood": 94,
+      "effects": ["pulse", "pair_punch", "sparkle", "split", "blocks", "strobe", "peak_blocks", "gate", "binary", "siren"],
+      "motion_scenes": ["techno_left_right", "techno_cross_hits", "hardstyle_double_hits", "split_strobe", "gobo_chase", "x_cross", "all_random", "pair_random", "duo_random"]
+    },
+    {
+      "id": "ballermann",
+      "name": "Ballermann / Party",
+      "mood": 76,
+      "effects": ["pulse", "pair_swap", "pair_punch", "rainbow", "blocks", "theater", "traffic", "fill", "siren", "party_siren"],
+      "motion_scenes": ["front", "left", "right", "center_pulse", "corner_swap", "side_pingpong", "x_cross"]
     }
   ],
   "scenes": [

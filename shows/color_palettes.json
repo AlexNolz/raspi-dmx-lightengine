@@ -35,6 +35,26 @@
       "id": "rgb_hard",
       "name": "Hard RGB",
       "colors": ["red", "green", "blue", "white"]
+    },
+    {
+      "id": "edm_electric",
+      "name": "EDM Electric",
+      "colors": ["cyan", "pink", "blue", "yellow"]
+    },
+    {
+      "id": "techno_strike",
+      "name": "Techno Strike",
+      "colors": ["red", "blue", "white", "cyan"]
+    },
+    {
+      "id": "hardstyle_power",
+      "name": "Hardstyle Power",
+      "colors": ["acid", "red", "blue", "white"]
+    },
+    {
+      "id": "ballermann_party",
+      "name": "Ballermann Party",
+      "colors": ["red", "yellow", "blue", "green"]
     }
   ],
   "preset_palettes": [
@@ -42,6 +62,10 @@
     { "id": "club", "palettes": ["club_blue_amber", "club_teal_pink", "deep_blue"] },
     { "id": "rave", "palettes": ["rave_neon", "rave_acid", "rgb_hard"] },
     { "id": "game_show", "palettes": ["deep_blue", "club_blue_amber"] },
-    { "id": "rgb_hard", "palettes": ["rgb_hard", "rave_acid"] }
+    { "id": "rgb_hard", "palettes": ["rgb_hard", "rave_acid"] },
+    { "id": "edm", "palettes": ["edm_electric", "club_teal_pink"] },
+    { "id": "techno", "palettes": ["techno_strike", "deep_blue"] },
+    { "id": "hardstyle", "palettes": ["hardstyle_power", "rave_acid", "rgb_hard"] },
+    { "id": "ballermann", "palettes": ["ballermann_party", "rgb_hard"] }
   ]
 }

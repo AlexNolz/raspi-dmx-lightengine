@@ -143,6 +143,7 @@ void MotionSceneLibrary::load_from_file(const std::string& path) {
         scene.decay = number_field(object, "decay", 5.0);
         scene.x_amount = number_field(object, "x_amount", 0.3);
         scene.y_amount = number_field(object, "y_amount", 0.2);
+        scene.beat_multiplier = std::max(0.25, number_field(object, "beat_multiplier", 1.0));
         scene.energy_min = clamp01(number_field(object, "energy_min", 0.0));
         scene.energy_max = clamp01(number_field(object, "energy_max", 1.0));
         scene.allow_shake = bool_field(object, "allow_shake", false);
@@ -201,7 +202,7 @@ MotionTarget MotionSceneLibrary::evaluate(
         target = {point.x, point.y, lerp(scene.dimmer_min, scene.dimmer_max, hit)};
     } else if (scene.type == "alternating_pairs") {
         const MotionPoint point = point_at(scene, pair);
-        const bool on = (static_cast<std::size_t>(std::floor(beat.beat * 2.0)) + pair) % 2U == 0U;
+        const bool on = (static_cast<std::size_t>(std::floor(beat.beat * scene.beat_multiplier)) + pair) % 2U == 0U;
         target = {point.x, point.y, on ? scene.dimmer_max : scene.dimmer_min};
     } else if (scene.type == "indexed_points") {
         const std::size_t offset = step % 2U == 0U ? fixture_index : fixture_count - 1U - fixture_index;

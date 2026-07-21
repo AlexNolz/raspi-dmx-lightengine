@@ -18,6 +18,18 @@ double preset_bias(const std::string_view preset) {
     if (preset == "rave") {
         return 0.90;
     }
+    if (preset == "hardstyle") {
+        return 0.98;
+    }
+    if (preset == "techno") {
+        return 0.84;
+    }
+    if (preset == "edm") {
+        return 0.68;
+    }
+    if (preset == "ballermann") {
+        return 0.72;
+    }
     if (preset == "rgb_hard") {
         return 0.78;
     }

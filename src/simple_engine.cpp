@@ -358,12 +358,17 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
         bar1_.set_all(Rgb{value, value, value});
         bar2_.set_all(Rgb{value, value, value});
     } else if (color_strobe_active) {
-        const auto beat_index = static_cast<std::size_t>(std::floor(beat.beat * 4.0));
+        const double seconds = std::chrono::duration<double>(now.time_since_epoch()).count();
+        const double hz = 5.0 + strobe_speed_ * 7.0;
+        const auto flash = static_cast<std::size_t>(std::floor(seconds * hz));
         for (std::size_t segment = 0; segment < bar1_.size(); ++segment) {
-            const auto color_index = (segment + beat_index) % 3U;
-            const Rgb color = color_index == 0U ? Rgb{to_dmx(scene_context.master), 0, 0}
-                : color_index == 1U ? Rgb{0, to_dmx(scene_context.master), 0}
-                                    : Rgb{0, 0, to_dmx(scene_context.master)};
+            const bool left_half = segment < bar1_.size() / 2U;
+            const bool active_half = left_half == (flash % 2U == 0U);
+            const std::size_t color_index = (flash / 2U + (left_half ? 0U : 1U)) % 3U;
+            const std::uint8_t value = active_half ? to_dmx(scene_context.master) : 0U;
+            const Rgb color = color_index == 0U ? Rgb{value, 0, 0}
+                : color_index == 1U ? Rgb{0, value, 0}
+                                    : Rgb{0, 0, value};
             bar1_.set_wash(segment, color);
             bar2_.set_wash(segment, color);
         }
@@ -550,10 +555,13 @@ void SimpleEngine::render_moving_heads(
             scene = "center_pulse";
         } else {
             std::vector<std::string> preferred;
-            if (selected_effect_ == "split" || selected_effect_ == "siren" || selected_effect_ == "traffic") {
-                preferred = {"split_strobe", "cross_pairs", "side_pingpong"};
-            } else if (selected_effect_ == "blocks" || selected_effect_ == "pair_swap" || selected_effect_ == "binary" || selected_effect_ == "gate") {
-                preferred = {"corner_swap", "pair_random", "x_cross"};
+            if (selected_effect_ == "split" || selected_effect_ == "siren" || selected_effect_ == "party_siren" || selected_effect_ == "traffic") {
+                preferred = {"techno_left_right", "techno_cross_hits", "split_strobe", "cross_pairs", "side_pingpong"};
+            } else if (selected_effect_ == "blocks" || selected_effect_ == "pair_swap" || selected_effect_ == "pair_punch" ||
+                selected_effect_ == "binary" || selected_effect_ == "gate") {
+                preferred = {"techno_left_right", "techno_cross_hits", "corner_swap", "pair_random", "x_cross"};
+            } else if (selected_effect_ == "peak_blocks") {
+                preferred = {"techno_left_right", "hardstyle_double_hits", "split_strobe", "x_cross", "gobo_chase"};
             } else if (selected_effect_ == "ball" || selected_effect_ == "scanner" || selected_effect_ == "comet") {
                 preferred = {"gobo_chase", "line_sweep", "point_chase"};
             } else if (selected_effect_ == "rainbow" || selected_effect_ == "theater" || selected_effect_ == "zipper" ||
@@ -700,6 +708,12 @@ void SimpleEngine::select_next_effect_locked(const MusicDynamicsSnapshot* dynami
     if (active_effects_.empty()) {
         active_effects_.push_back("breathe");
     }
+    const bool intense_preset = preset_ == "rave" || preset_ == "techno" || preset_ == "hardstyle" || preset_ == "rgb_hard";
+    if (dynamics != nullptr && dynamics->highpoint() && intense_preset &&
+        std::find(active_effects_.begin(), active_effects_.end(), "peak_blocks") != active_effects_.end()) {
+        selected_effect_ = "peak_blocks";
+        return;
+    }
     const auto current = std::find(active_effects_.begin(), active_effects_.end(), selected_effect_);
     const std::size_t start = current == active_effects_.end()
         ? 0U
@@ -748,12 +762,12 @@ void SimpleEngine::apply_preset_locked(const std::string& preset) {
     mood_ = definition->mood;
     active_effects_ = definition->effects.empty() ? std::vector<std::string>{"breathe"} : definition->effects;
     active_scenes_ = definition->motion_scenes.empty() ? std::vector<std::string>{"center_pulse"} : definition->motion_scenes;
-    if (preset_ == "rave") {
+    if (preset_ == "rave" || preset_ == "hardstyle") {
         gobo_enabled_ = true;
         gobo_mode_ = "random_beat";
         gobo_highpoint_only_ = false;
         gobo_shake_enabled_ = true;
-    } else if (preset_ == "rgb_hard") {
+    } else if (preset_ == "rgb_hard" || preset_ == "techno") {
         gobo_enabled_ = true;
         gobo_mode_ = "beat_step";
         gobo_highpoint_only_ = false;
@@ -763,7 +777,7 @@ void SimpleEngine::apply_preset_locked(const std::string& preset) {
         gobo_mode_ = "static";
         gobo_highpoint_only_ = false;
         gobo_shake_enabled_ = false;
-    } else if (preset_ == "game_show") {
+    } else if (preset_ == "game_show" || preset_ == "edm") {
         gobo_enabled_ = true;
         gobo_mode_ = "phrase_random";
         gobo_highpoint_only_ = true;

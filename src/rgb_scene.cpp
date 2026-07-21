@@ -143,32 +143,34 @@ public:
 
     void render(RgbWashBar& bar, const RgbSceneContext& context, const RgbPalette& palette) const override {
         const std::size_t count = std::max<std::size_t>(1U, bar.size());
+        const std::size_t pair_count = std::max<std::size_t>(1U, (count + 1U) / 2U);
         const std::size_t step = static_cast<std::size_t>(std::max<std::int64_t>(0, context.beat.position));
         const double hit = beat_hit(context.beat, 9.0);
         for (std::size_t segment = 0; segment < bar.size(); ++segment) {
+            const std::size_t pair_segment = segment / 2U;
             Rgb color{};
             double level = 1.0;
             if (scene_id_ == "ball") {
-                const double position = (std::sin(context.beat.beat * 0.72) + 1.0) * 0.5 * static_cast<double>(count - 1U);
-                level = 0.06 + std::exp(-std::abs(static_cast<double>(segment) - position) * 1.15) * 0.90;
+                const double position = (std::sin(context.beat.beat * 0.72) + 1.0) * 0.5 * static_cast<double>(pair_count - 1U);
+                level = 0.06 + std::exp(-std::abs(static_cast<double>(pair_segment) - position) * 1.45) * 0.90;
                 color = palette_color(palette, step / 4U);
             } else if (scene_id_ == "pair_swap") {
                 const bool alternate = ((segment / 2U) + step / 2U) % 2U != 0U;
                 color = palette_color(palette, alternate ? 1U : 0U);
                 level = 0.20 + hit * (alternate ? 0.75 : 0.46);
             } else if (scene_id_ == "rainbow") {
-                color = rainbow_color(static_cast<double>(segment) / static_cast<double>(count) + context.beat.beat * 0.035);
+                color = rainbow_color(static_cast<double>(pair_segment) / static_cast<double>(pair_count) + context.beat.beat * 0.035);
                 level = 0.42 + context.mood * 0.45;
             } else if (scene_id_ == "scanner") {
-                const double span = static_cast<double>(std::max<std::size_t>(1U, count * 2U - 2U));
+                const double span = static_cast<double>(std::max<std::size_t>(1U, pair_count * 2U - 2U));
                 double position = std::fmod(context.beat.beat * 1.1, span);
-                if (position > static_cast<double>(count - 1U)) {
+                if (position > static_cast<double>(pair_count - 1U)) {
                     position = span - position;
                 }
-                level = 0.04 + std::exp(-std::abs(static_cast<double>(segment) - position) * 1.5) * 0.92;
+                level = 0.04 + std::exp(-std::abs(static_cast<double>(pair_segment) - position) * 1.7) * 0.92;
                 color = palette_color(palette, step / 4U);
             } else if (scene_id_ == "sparkle") {
-                const std::size_t hash = segment * 37U + step * 101U;
+                const std::size_t hash = pair_segment * 37U + step * 101U;
                 const bool active = hash % 11U < (context.mood > 0.65 ? 3U : 2U);
                 color = palette_color(palette, hash);
                 level = active ? (0.35 + hit * 0.65) : 0.025;
@@ -177,39 +179,44 @@ public:
                 color = palette_color(palette, left ? step / 4U : step / 4U + 1U);
                 level = 0.18 + hit * (left == (step % 2U == 0U) ? 0.82 : 0.34);
             } else if (scene_id_ == "blocks") {
-                color = palette_color(palette, segment / 2U + step / 4U);
-                level = ((segment / 2U + step) % 3U == 0U) ? 0.88 : 0.12;
+                color = palette_color(palette, pair_segment + step / 4U);
+                level = ((pair_segment + step) % 3U == 0U) ? 0.95 : 0.08;
             } else if (scene_id_ == "strobe") {
                 color = palette_color(palette, step);
                 level = context.beat.phase < (0.08 + context.mood * 0.12) ? 1.0 : 0.0;
+            } else if (scene_id_ == "quad_strobe") {
+                const bool left_half = segment < count / 2U;
+                const bool left_on = step % 2U == 0U;
+                color = palette_color(palette, left_half ? step : step + 1U);
+                level = context.beat.phase < 0.20 && left_half == left_on ? 1.0 : 0.0;
             } else if (scene_id_ == "breathe") {
-                color = mix(palette_color(palette, 0), palette_color(palette, 1), static_cast<double>(segment) / static_cast<double>(count));
+                color = mix(palette_color(palette, 0), palette_color(palette, 1), static_cast<double>(pair_segment) / static_cast<double>(pair_count));
                 level = 0.10 + (std::sin(context.beat.beat * 0.32) * 0.5 + 0.5) * 0.42;
             } else if (scene_id_ == "theater") {
-                color = palette_color(palette, segment + step / 4U);
-                level = (segment + step) % 3U == 0U ? 0.92 : 0.055;
+                color = palette_color(palette, pair_segment + step / 4U);
+                level = (pair_segment + step) % 3U == 0U ? 0.92 : 0.055;
             } else if (scene_id_ == "zipper") {
-                const std::size_t distance = std::min(segment, count - 1U - segment);
+                const std::size_t distance = std::min(pair_segment, pair_count - 1U - pair_segment);
                 color = palette_color(palette, distance + step / 4U);
-                level = distance == (step % ((count + 1U) / 2U)) ? 0.95 : 0.06;
+                level = distance == (step % ((pair_count + 1U) / 2U)) ? 0.95 : 0.06;
             } else if (scene_id_ == "orbit") {
-                const double angle = context.beat.beat * 0.62 + static_cast<double>(segment) * 6.283185307 / static_cast<double>(count);
+                const double angle = context.beat.beat * 0.62 + static_cast<double>(pair_segment) * 6.283185307 / static_cast<double>(pair_count);
                 color = mix(palette_color(palette, 0), palette_color(palette, 2), std::sin(angle) * 0.5 + 0.5);
                 level = 0.12 + (std::cos(angle) * 0.5 + 0.5) * 0.73;
             } else if (scene_id_ == "traffic") {
-                color = segment % 3U == 0U ? Rgb{255,0,0} : segment % 3U == 1U ? Rgb{255,180,0} : Rgb{0,255,0};
-                level = segment % 3U == step % 3U ? 0.90 : 0.07;
+                color = pair_segment % 3U == 0U ? Rgb{255,0,0} : pair_segment % 3U == 1U ? Rgb{255,180,0} : Rgb{0,255,0};
+                level = pair_segment % 3U == step % 3U ? 0.90 : 0.07;
             } else if (scene_id_ == "gate") {
                 const bool open = context.beat.phase < (0.20 + context.mood * 0.25);
-                color = palette_color(palette, segment + step / 2U);
-                level = open && (segment + step) % 2U == 0U ? 0.95 : 0.035;
+                color = palette_color(palette, pair_segment + step / 2U);
+                level = open && (pair_segment + step) % 2U == 0U ? 0.95 : 0.035;
             } else if (scene_id_ == "binary") {
-                color = palette_color(palette, segment);
-                level = ((step >> (segment % 6U)) & 1U) != 0U ? 0.88 : 0.035;
+                color = palette_color(palette, pair_segment);
+                level = ((step >> (pair_segment % 6U)) & 1U) != 0U ? 0.88 : 0.035;
             } else if (scene_id_ == "fill") {
-                const std::size_t filled = step % (count + 1U);
-                color = palette_color(palette, step / (count + 1U));
-                level = segment < filled ? 0.82 : 0.035;
+                const std::size_t filled = step % (pair_count + 1U);
+                color = palette_color(palette, step / (pair_count + 1U));
+                level = pair_segment < filled ? 0.82 : 0.035;
             } else if (scene_id_ == "siren") {
                 const bool left = segment < count / 2U;
                 const bool phase_left = static_cast<std::size_t>(std::floor(context.beat.beat * 2.0)) % 2U == 0U;
@@ -232,8 +239,9 @@ public:
 
     void render(RgbWashBar& bar, const RgbSceneContext& context, const RgbPalette& palette) const override {
         for (std::size_t segment = 0; segment < bar.size(); ++segment) {
-            const Rgb base = mix(palette_color(palette, 0), palette_color(palette, 1), static_cast<double>(segment) / 7.0);
-            const double shimmer = std::sin(context.beat.beat * 0.35 + static_cast<double>(segment) * 0.55) * 0.5 + 0.5;
+            const std::size_t group = segment / 2U;
+            const Rgb base = mix(palette_color(palette, 0), palette_color(palette, 1), static_cast<double>(group) / 3.0);
+            const double shimmer = std::sin(context.beat.beat * 0.35 + static_cast<double>(group) * 0.75) * 0.5 + 0.5;
             bar.set_wash(segment, scale(base, context.master * (0.16 + shimmer * 0.12 + context.mood * 0.18)));
         }
     }
@@ -248,7 +256,8 @@ public:
     void render(RgbWashBar& bar, const RgbSceneContext& context, const RgbPalette& palette) const override {
         const double hit = beat_hit(context.beat, 8.5);
         for (std::size_t segment = 0; segment < bar.size(); ++segment) {
-            const double distance = std::abs(static_cast<double>(segment) - 3.5) / 3.5;
+            const std::size_t group = segment / 2U;
+            const double distance = std::abs(static_cast<double>(group) - 1.5) / 1.5;
             const double center = 1.0 - clamp01(distance);
             const Rgb base = mix(palette_color(palette, 1), palette_color(palette, 2), center);
             bar.set_wash(segment, scale(base, context.master * (0.06 + hit * (0.45 + center * 0.35))));
@@ -264,9 +273,10 @@ public:
 
     void render(RgbWashBar& bar, const RgbSceneContext& context, const RgbPalette& palette) const override {
         for (std::size_t segment = 0; segment < bar.size(); ++segment) {
-            const double wave = std::sin(context.beat.beat * 1.25 - static_cast<double>(segment) * 0.85) * 0.5 + 0.5;
+            const std::size_t group = segment / 2U;
+            const double wave = std::sin(context.beat.beat * 1.25 - static_cast<double>(group) * 1.10) * 0.5 + 0.5;
             const double gate = std::pow(wave, 2.8);
-            bar.set_wash(segment, scale(palette_color(palette, segment + 2U), context.master * (0.03 + gate * 0.58)));
+            bar.set_wash(segment, scale(palette_color(palette, group + 2U), context.master * (0.03 + gate * 0.70)));
         }
     }
 };
@@ -278,10 +288,12 @@ public:
     }
 
     void render(RgbWashBar& bar, const RgbSceneContext& context, const RgbPalette& palette) const override {
-        const double head = std::fmod(context.beat.beat * 1.6, static_cast<double>(bar.size()));
+        const std::size_t group_count = std::max<std::size_t>(1U, (bar.size() + 1U) / 2U);
+        const double head = std::fmod(context.beat.beat * 1.3, static_cast<double>(group_count));
         for (std::size_t segment = 0; segment < bar.size(); ++segment) {
-            const double raw_distance = std::abs(static_cast<double>(segment) - head);
-            const double wrapped_distance = std::min(raw_distance, static_cast<double>(bar.size()) - raw_distance);
+            const std::size_t group = segment / 2U;
+            const double raw_distance = std::abs(static_cast<double>(group) - head);
+            const double wrapped_distance = std::min(raw_distance, static_cast<double>(group_count) - raw_distance);
             const double tail = std::exp(-wrapped_distance * 1.35);
             bar.set_wash(segment, scale(palette_color(palette, static_cast<std::size_t>(context.beat.position / 4) + 3U), context.master * tail * 0.75));
         }
@@ -298,9 +310,10 @@ public:
         const double hit = beat_hit(context.beat, 14.0);
         const auto seed = static_cast<std::size_t>(context.beat.position);
         for (std::size_t segment = 0; segment < bar.size(); ++segment) {
-            const bool active = ((segment * 5U + seed * 3U) % 8U) < 2U;
+            const std::size_t group = segment / 2U;
+            const bool active = ((group * 5U + seed * 3U) % 8U) < 2U;
             if (active) {
-                bar.set_wash(segment, scale(palette_color(palette, seed + segment), context.master * hit * 0.9));
+                bar.set_wash(segment, scale(palette_color(palette, seed + group), context.master * hit * 0.95));
             }
         }
     }
@@ -427,7 +440,7 @@ RgbSceneMixer::RgbSceneMixer()
     scenes_.push_back(std::make_unique<ChaseScene>());
     scenes_.push_back(std::make_unique<CometScene>());
     scenes_.push_back(std::make_unique<BeatSparkScene>());
-    for (const char* pattern : {"ball", "pair_swap", "rainbow", "scanner", "sparkle", "split", "blocks", "strobe",
+    for (const char* pattern : {"ball", "pair_swap", "rainbow", "scanner", "sparkle", "split", "blocks", "strobe", "quad_strobe",
              "breathe", "theater", "zipper", "orbit", "traffic", "gate", "binary", "fill", "siren"}) {
         scenes_.push_back(std::make_unique<PatternScene>(pattern));
     }
