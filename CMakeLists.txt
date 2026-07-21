@@ -27,14 +27,17 @@ target_sources(
     lightengine_core
     PRIVATE
         src/artnet_sender.cpp
+        src/beat_clock.cpp
         src/control_command.cpp
         src/fixture_runtime.cpp
+        src/rgb_scene.cpp
         src/simple_engine.cpp
         src/os2l_event.cpp
         src/os2l_receiver.cpp
         src/project.cpp
         src/web_server.cpp
         include/lightengine/artnet_sender.hpp
+        include/lightengine/beat_clock.hpp
         include/lightengine/color.hpp
         include/lightengine/control_command.hpp
         include/lightengine/dmx.hpp
@@ -44,6 +47,7 @@ target_sources(
         include/lightengine/os2l_event.hpp
         include/lightengine/os2l_receiver.hpp
         include/lightengine/project.hpp
+        include/lightengine/rgb_scene.hpp
         include/lightengine/version.hpp
         include/lightengine/web_server.hpp
 )

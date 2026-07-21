@@ -32,10 +32,6 @@ void json_string_array(std::ostringstream& out, const std::vector<std::string>& 
     out << ']';
 }
 
-bool contains(const std::vector<std::string>& values, const std::string& value) {
-    return std::find(values.begin(), values.end(), value) != values.end();
-}
-
 void set_enabled(std::vector<std::string>& values, const std::string& value, const bool enabled) {
     const auto item = std::find(values.begin(), values.end(), value);
     if (enabled && item == values.end()) {
@@ -47,34 +43,6 @@ void set_enabled(std::vector<std::string>& values, const std::string& value, con
 }
 
 }  // namespace
-
-void BeatClock::on_beat(const Os2lBeatEvent& beat, const std::chrono::steady_clock::time_point received_at) {
-    position_ = beat.position;
-    bpm_ = std::max(20.0, std::min(260.0, beat.bpm));
-    strength_ = clamp01(beat.strength);
-    last_beat_at_ = received_at;
-    locked_ = true;
-}
-
-BeatSnapshot BeatClock::snapshot(const std::chrono::steady_clock::time_point now) const {
-    const double beat_seconds = 60.0 / std::max(1.0, bpm_);
-    double phase = 0.0;
-    bool locked = false;
-    if (locked_) {
-        const std::chrono::duration<double> age = now - last_beat_at_;
-        phase = std::max(0.0, age.count()) / beat_seconds;
-        locked = age.count() < 3.0;
-    }
-    const double wrapped_phase = phase - std::floor(phase);
-    return BeatSnapshot{
-        static_cast<double>(position_) + phase,
-        wrapped_phase,
-        position_,
-        bpm_,
-        strength_,
-        locked,
-    };
-}
 
 SimpleEngine::SimpleEngine(SimpleEngineConfig config)
     : config_{std::move(config)},
@@ -179,9 +147,28 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
     }
 
     const BeatSnapshot beat = beat_clock_.snapshot(now);
-    const double master = master_ * led_master_;
-    render_bar(bar1_, beat, master);
-    render_bar(bar2_, beat, master);
+    const RgbSceneContext scene_context{
+        beat,
+        clamp01(master_ * led_master_),
+        static_cast<double>(mood_) / 100.0,
+    };
+    const RgbPalette& palette = rgb_scenes_.palette_for_preset(preset_);
+    rgb_scenes_.render(bar1_, active_effects_, scene_context, palette);
+    rgb_scenes_.render(bar2_, active_effects_, scene_context, palette);
+    if (whiteout_held_ || strobe_out_held_) {
+        bar1_.set_all(Rgb{to_dmx(scene_context.master), to_dmx(scene_context.master), to_dmx(scene_context.master)});
+        bar2_.set_all(Rgb{to_dmx(scene_context.master), to_dmx(scene_context.master), to_dmx(scene_context.master)});
+    } else if (color_strobe_held_) {
+        const auto beat_index = static_cast<std::size_t>(std::floor(beat.beat));
+        for (std::size_t segment = 0; segment < bar1_.size(); ++segment) {
+            const auto color_index = (segment + beat_index) % 3U;
+            const Rgb color = color_index == 0U ? Rgb{to_dmx(scene_context.master), 0, 0}
+                : color_index == 1U ? Rgb{0, to_dmx(scene_context.master), 0}
+                                    : Rgb{0, 0, to_dmx(scene_context.master)};
+            bar1_.set_wash(segment, color);
+            bar2_.set_wash(segment, color);
+        }
+    }
     bar1_.render_to(frame);
     bar2_.render_to(frame);
 
@@ -246,7 +233,7 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(,"master":)" << strobe_master_ << R"(,"speed":)" << strobe_speed_
         << R"(},"fog":{"name":"unused","start":1,"channels":1,"enabled":false,"armed":false}}})";
 
-    out << R"(,"effects":{"pulse":"Beat Pulse","scanner":"Scanner","comet":"RGB Comet","gate":"Beat Gate","fill":"Fill Chase","strobe":"Color Strobe","binary":"Binary Pixels","siren":"Red Blue Siren"})";
+    out << R"(,"effects":{"rgb_static":"Static Glow","rgb_beat_pulse":"Beat Pulse","rgb_chase":"Chase","rgb_comet":"Comet","rgb_spark":"Beat Spark"})";
     out << R"(,"motion_modes":{"auto":"Auto","center_pulse":"Mitte Pulse","point_chase":"Punkt Chase","line_sweep":"Links/Rechts Sweep","depth_sweep":"Vorne/Hinten Sweep","cross_pairs":"2 Links / 2 Rechts","split_strobe":"Links/Rechts Strobe","x_cross":"X Cross","color_fan":"Color Fan","pair_random":"Paare Random"})";
     out << R"(,"motion_scenes":{"beat_drive":"Beat Drive","center_pulse":"Mitte Pulse","point_chase":"Punkt Chase","line_sweep":"Links/Rechts Sweep","depth_sweep":"Vorne/Hinten Sweep","cross_pairs":"2 Links / 2 Rechts","split_strobe":"Links/Rechts Strobe","x_cross":"X Cross","color_fan":"Color Fan","pair_random":"Paare Random"})";
     out << R"(,"presets":["club","rave","rgb_hard","custom"],"show":{},"preview":[)";
@@ -268,41 +255,19 @@ void SimpleEngine::mark_artnet_packet_sent() {
     ++artnet_packets_;
 }
 
-void SimpleEngine::render_bar(RgbWashBar& bar, const BeatSnapshot& beat, const double master) {
-    const bool beat_drive = contains(active_scenes_, "beat_drive") || contains(active_scenes_, "center_pulse");
-    const double hit = beat_drive ? std::exp(-beat.phase * 7.0) * (0.45 + beat.strength * 0.55) : 0.25;
-    const double mood = static_cast<double>(mood_) / 100.0;
-    for (std::size_t segment = 0; segment < bar.size(); ++segment) {
-        const double chase = std::sin((beat.beat * 0.45) + static_cast<double>(segment) * 0.7) * 0.5 + 0.5;
-        const double level = clamp01((0.08 + hit + chase * 0.22) * master);
-        Rgb color{
-            to_dmx(level * (0.45 + mood * 0.55)),
-            to_dmx(level * (0.15 + (1.0 - mood) * 0.35)),
-            to_dmx(level * (0.85 - mood * 0.25)),
-        };
-        if (whiteout_held_ || strobe_out_held_) {
-            color = Rgb{to_dmx(master), to_dmx(master), to_dmx(master)};
-        } else if (color_strobe_held_) {
-            color = (segment + static_cast<std::size_t>(std::floor(beat.beat))) % 3U == 0U ? Rgb{to_dmx(master), 0, 0}
-                : (segment % 3U == 1U ? Rgb{0, to_dmx(master), 0} : Rgb{0, 0, to_dmx(master)});
-        }
-        bar.set_wash(segment, color);
-    }
-}
-
 void SimpleEngine::apply_preset_locked(const std::string& preset) {
     preset_ = preset;
     if (preset == "rave") {
         mood_ = 88;
-        active_effects_ = {"binary", "gate", "pulse", "rainbow", "scanner", "siren", "strobe"};
+        active_effects_ = {"rgb_beat_pulse", "rgb_chase", "rgb_comet", "rgb_spark"};
         active_scenes_ = {"beat_drive", "color_fan", "pair_random", "split_strobe", "x_cross"};
     } else if (preset == "rgb_hard") {
         mood_ = 78;
-        active_effects_ = {"binary", "comet", "gate", "pulse", "scanner"};
+        active_effects_ = {"rgb_beat_pulse", "rgb_chase", "rgb_spark"};
         active_scenes_ = {"beat_drive", "gobo_chase", "side_pingpong", "split_strobe", "x_cross"};
     } else {
         mood_ = 58;
-        active_effects_ = {"ball", "comet", "fill", "gate", "pulse", "scanner", "sparkle"};
+        active_effects_ = {"rgb_static", "rgb_beat_pulse", "rgb_comet"};
         active_scenes_ = {"beat_drive", "center_pulse", "cross_pairs", "depth_sweep", "line_sweep", "point_chase"};
         preset_ = "club";
     }

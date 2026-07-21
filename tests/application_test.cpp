@@ -4,6 +4,7 @@
 #include "lightengine/fixture_runtime.hpp"
 #include "lightengine/os2l_event.hpp"
 #include "lightengine/project.hpp"
+#include "lightengine/rgb_scene.hpp"
 #include "lightengine/simple_engine.hpp"
 
 #include <iostream>
@@ -241,6 +242,26 @@ int main() {
         }
         if (snapshot.phase < 0.24 || snapshot.phase > 0.26) {
             std::cerr << "BeatClock phase is not synced to OS2L beat time\n";
+            return 1;
+        }
+    }
+
+    {
+        lightengine::RgbSceneMixer mixer;
+        lightengine::RgbWashBar bar{lightengine::DmxAddress{1}, 8};
+        const lightengine::RgbSceneContext context{
+            lightengine::BeatSnapshot{16.0, 0.0, 16, 120.0, 1.0, true},
+            1.0,
+            0.6,
+        };
+        mixer.render(bar, {"rgb_static", "rgb_beat_pulse", "rgb_comet"}, context, mixer.palette_by_id("club"));
+        bool has_output = false;
+        for (std::size_t segment = 0; segment < bar.size(); ++segment) {
+            const lightengine::Rgb color = bar.wash_color(segment);
+            has_output = has_output || color.r != 0 || color.g != 0 || color.b != 0;
+        }
+        if (!has_output || mixer.palette_for_preset("rave").id != "rave") {
+            std::cerr << "RgbSceneMixer did not render scenes or select palettes\n";
             return 1;
         }
     }

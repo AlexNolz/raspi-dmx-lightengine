@@ -1,11 +1,13 @@
 #pragma once
 
 #include "lightengine/artnet_sender.hpp"
+#include "lightengine/beat_clock.hpp"
 #include "lightengine/color.hpp"
 #include "lightengine/control_command.hpp"
 #include "lightengine/dmx.hpp"
 #include "lightengine/fixture_runtime.hpp"
 #include "lightengine/os2l_event.hpp"
+#include "lightengine/rgb_scene.hpp"
 
 #include <chrono>
 #include <cstdint>
@@ -14,28 +16,6 @@
 #include <vector>
 
 namespace lightengine {
-
-struct BeatSnapshot final {
-    double beat{0.0};
-    double phase{0.0};
-    std::int64_t position{};
-    double bpm{120.0};
-    double strength{1.0};
-    bool locked_to_os2l{false};
-};
-
-class BeatClock final {
-public:
-    void on_beat(const Os2lBeatEvent& beat, std::chrono::steady_clock::time_point received_at);
-    [[nodiscard]] BeatSnapshot snapshot(std::chrono::steady_clock::time_point now) const;
-
-private:
-    std::int64_t position_{};
-    double bpm_{120.0};
-    double strength_{1.0};
-    std::chrono::steady_clock::time_point last_beat_at_{};
-    bool locked_{false};
-};
 
 struct SimpleEngineConfig final {
     std::string artnet_host{"127.0.0.1"};
@@ -58,7 +38,6 @@ public:
     void mark_artnet_packet_sent();
 
 private:
-    void render_bar(RgbWashBar& bar, const BeatSnapshot& beat, double master);
     void apply_preset_locked(const std::string& preset);
 
     mutable std::mutex mutex_;
@@ -81,7 +60,7 @@ private:
     double strobe_speed_{1.0};
     std::uint8_t mood_{58};
     std::string preset_{"club"};
-    std::vector<std::string> active_effects_{"pulse", "scanner", "comet"};
+    std::vector<std::string> active_effects_{"rgb_static", "rgb_beat_pulse", "rgb_comet"};
     std::vector<std::string> active_scenes_{"beat_drive"};
     std::uint64_t os2l_messages_{};
     std::uint64_t artnet_packets_{};
@@ -89,6 +68,7 @@ private:
     std::vector<Rgb> preview_;
     RgbWashBar bar1_;
     RgbWashBar bar2_;
+    RgbSceneMixer rgb_scenes_;
 };
 
 }  // namespace lightengine
