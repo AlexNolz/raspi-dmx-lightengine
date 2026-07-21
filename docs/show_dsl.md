@@ -96,7 +96,7 @@ Moving-Head-Szenen sollen dieselbe Idee nutzen: JSON beschreibt Zielpositionen, 
   "motion": { "mode": "sine", "speed": 0.5, "spread": 0.25 },
   "dimmer": { "mode": "constant", "value": 0.65 },
   "color": { "mode": "palette_step", "every_beats": 8 },
-  "gobo": { "mode": "static", "value": 0 },
+  "gobo": { "mode": "static", "name": "open" },
   "strobe": { "mode": "off" }
 }
 ```
@@ -108,6 +108,40 @@ Geplante Moving-Head-Typen:
 - `beat_hits`: kurze Beat-Hits mit Farbe/Gobo-Wechsel
 - `fan`: Pan/Tilt-Fächer über mehrere Fixtures
 - `circle`: Kreis-/Acht-Bewegung, später mit Kalibrierung
+
+## Gobo Wheels
+
+Gobos werden in Show-JSON über Namen angesprochen, nicht über DMX-Zahlen:
+
+```json
+"gobo": {
+  "mode": "beat_step",
+  "names": ["open", "gobo_1", "gobo_2", "gobo_3"],
+  "shake_when_mood_above": 0.62
+}
+```
+
+Die konkrete Fixture übersetzt diese Namen auf DMX-Werte:
+
+```json
+"gobo": {
+  "channel": 6,
+  "type": "wheel",
+  "open": 0,
+  "gobos": {
+    "open": 0,
+    "gobo_1": 10,
+    "gobo_2": 18
+  },
+  "effects": {
+    "shake_offset": 64,
+    "shake_min": 64,
+    "shake_max": 127
+  }
+}
+```
+
+Damit kann eine Show dieselben Gobo-Namen verwenden, auch wenn ein anderes Moving-Head-Modell andere DMX-Werte braucht.
 
 ## Presets
 

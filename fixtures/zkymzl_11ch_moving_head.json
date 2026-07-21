@@ -27,7 +27,28 @@
         "pink": 100
       }
     },
-    "gobo": { "channel": 6, "type": "wheel", "label": "Gobo Wheel" },
+    "gobo": {
+      "channel": 6,
+      "type": "wheel",
+      "label": "Gobo Wheel",
+      "open": 0,
+      "gobos": {
+        "open": 0,
+        "gobo_1": 10,
+        "gobo_2": 18,
+        "gobo_3": 26,
+        "gobo_4": 34,
+        "gobo_5": 42,
+        "gobo_6": 50,
+        "gobo_7": 58
+      },
+      "effects": {
+        "shake_offset": 64,
+        "shake_min": 64,
+        "shake_max": 127
+      },
+      "notes": "Gobo base values are from the existing Python engine. Python used base + 64 for gobo shake/rotation looks and clamped the result to 64..127."
+    },
     "dimmer": { "channel": 9, "type": "intensity", "label": "Dimmer" },
     "strobe": { "channel": 10, "type": "strobe", "label": "Strobe" },
     "reset": { "channel": 11, "type": "maintenance", "label": "Reset" }
