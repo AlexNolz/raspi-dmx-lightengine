@@ -588,7 +588,16 @@ std::string RgbSceneMixer::palettes_json() const {
         if (index != 0U) {
             out << ',';
         }
-        out << '"' << palettes_.at(index).id << R"(":")" << palettes_.at(index).label << '"';
+        const RgbPalette& palette = palettes_.at(index);
+        out << '"' << palette.id << R"(":{"name":")" << palette.label << R"(","colors":)";
+        out << '[';
+        for (std::size_t color_index = 0; color_index < palette.color_names.size(); ++color_index) {
+            if (color_index != 0U) {
+                out << ',';
+            }
+            out << '"' << palette.color_names.at(color_index) << '"';
+        }
+        out << "]}";
     }
     out << '}';
     return out.str();

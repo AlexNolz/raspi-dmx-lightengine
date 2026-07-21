@@ -83,6 +83,15 @@ function rgb(color) {
   return `rgb(${color.r}, ${color.g}, ${color.b})`;
 }
 
+function colorName(name) {
+  const names = {
+    white: "Weiß", red: "Rot", cyan: "Cyan", teal: "Türkis", amber: "Amber",
+    orange: "Orange", blue: "Blau", yellow: "Gelb", acid: "Acid-Gelb",
+    green: "Grün", uv: "UV/Violett", magenta: "Magenta", pink: "Pink"
+  };
+  return names[name] || name;
+}
+
 function render(state) {
   const config = state.config;
   const artnetTarget = config.artnet_host === "127.0.0.1"
@@ -96,7 +105,7 @@ function render(state) {
   energyStatus.textContent = `${sectionLabels[state.music_section] || state.music_section} ${Math.round((state.music_energy ?? 0.5) * 100)}%${strengthHint}`;
   effectStatus.textContent = state.active_effect_label;
   const layerState = state.layer_state || {};
-  const colors = Array.isArray(layerState.color_slots) ? layerState.color_slots.join(" + ") : "Farben";
+  const colors = Array.isArray(layerState.color_slots) ? layerState.color_slots.map(colorName).join(" + ") : "Farben";
   layerStatus.textContent = `${layerState.palette_label || "Palette"}: ${colors} · ${layerState.motion_scene || "Bewegung"}`;
   targetStatus.textContent = artnetTarget;
 
@@ -206,7 +215,7 @@ function render(state) {
 
   if (!colorPalettesBuilt && state.color_palettes) {
     colorPalettesBuilt = true;
-    colorPalettesBox.replaceChildren(...Object.entries(state.color_palettes).map(([key, label]) => {
+    colorPalettesBox.replaceChildren(...Object.entries(state.color_palettes).map(([key, palette]) => {
       const row = document.createElement("label");
       row.className = "effect-toggle palette-toggle";
       const checkbox = document.createElement("input");
@@ -216,7 +225,9 @@ function render(state) {
         send({ action: "toggle_color_palette", palette: key, enabled: checkbox.checked });
       });
       const text = document.createElement("span");
-      text.textContent = label;
+      const paletteName = typeof palette === "string" ? palette : palette.name;
+      const paletteColors = typeof palette === "string" ? [] : (palette.colors || []);
+      text.textContent = `${paletteName} · ${paletteColors.map(colorName).join(" / ")}`;
       row.append(checkbox, text);
       return row;
     }));
