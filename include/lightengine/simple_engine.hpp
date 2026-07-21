@@ -11,6 +11,7 @@
 #include "lightengine/music_dynamics.hpp"
 #include "lightengine/project.hpp"
 #include "lightengine/rgb_scene.hpp"
+#include "lightengine/show_layers.hpp"
 
 #include <chrono>
 #include <array>
@@ -53,6 +54,7 @@ private:
         DmxFrame& frame,
         const BeatSnapshot& beat,
         std::chrono::steady_clock::time_point now,
+        const RgbPalette& palette,
         std::string_view scene_override = {});
     void render_auxiliary_fixtures(DmxFrame& frame, const BeatSnapshot& beat, std::chrono::steady_clock::time_point now) const;
 
@@ -112,9 +114,14 @@ private:
     RgbWashBar bar2_;
     RgbSceneMixer rgb_scenes_;
     MotionSceneLibrary motion_scenes_;
+    ColorLayer color_layer_;
+    SceneLayerPlanner scene_layer_planner_;
+    GoboLayer gobo_layer_;
     Zkymzl11Profile moving_head_profile_;
     ShowProject project_;
     std::array<Zkymzl11Look, 4> last_moving_head_looks_{};
+    std::uint64_t show_seed_{0x6c69676874656e67ULL};
+    std::uint64_t manual_selection_nonce_{};
 };
 
 }  // namespace lightengine

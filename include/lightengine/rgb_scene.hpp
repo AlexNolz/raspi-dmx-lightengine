@@ -40,6 +40,7 @@ struct RgbSceneDefinition final {
     double intensity{1.0};
     double energy_min{0.0};
     double energy_max{1.0};
+    std::size_t color_slots{4};
 };
 
 class RgbScene {

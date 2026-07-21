@@ -117,22 +117,6 @@ double beat_hit(const BeatSnapshot& beat, const double sharpness) {
     return std::exp(-beat.phase * sharpness) * (0.35 + beat.strength * 0.65);
 }
 
-Rgb rainbow_color(double hue) {
-    hue -= std::floor(hue);
-    const double sector = hue * 6.0;
-    const int index = static_cast<int>(std::floor(sector));
-    const double fraction = sector - std::floor(sector);
-    const double falling = 1.0 - fraction;
-    switch (index % 6) {
-        case 0: return Rgb{255, to_dmx(fraction), 0};
-        case 1: return Rgb{to_dmx(falling), 255, 0};
-        case 2: return Rgb{0, 255, to_dmx(fraction)};
-        case 3: return Rgb{0, to_dmx(falling), 255};
-        case 4: return Rgb{to_dmx(fraction), 0, 255};
-        default: return Rgb{255, 0, to_dmx(falling)};
-    }
-}
-
 class PatternScene final : public RgbScene {
 public:
     explicit PatternScene(std::string scene_id) : scene_id_{std::move(scene_id)} {}
@@ -162,7 +146,10 @@ public:
                 color = palette_color(palette, alternate ? 1U : 0U);
                 level = 0.20 + hit * (alternate ? 0.75 : 0.46);
             } else if (scene_id_ == "rainbow") {
-                color = rainbow_color(static_cast<double>(pair_segment) / static_cast<double>(pair_count) + context.beat.beat * 0.035);
+                const double travel = static_cast<double>(pair_segment) / static_cast<double>(pair_count) + context.beat.beat * 0.035;
+                const double palette_position = travel * static_cast<double>(std::max<std::size_t>(1U, palette.colors.size()));
+                const auto slot = static_cast<std::size_t>(std::floor(palette_position));
+                color = mix(palette_color(palette, slot), palette_color(palette, slot + 1U), palette_position - std::floor(palette_position));
                 level = 0.42 + context.mood * 0.45;
             } else if (scene_id_ == "scanner") {
                 const double span = static_cast<double>(std::max<std::size_t>(1U, pair_count * 2U - 2U));
@@ -207,7 +194,7 @@ public:
                 color = mix(palette_color(palette, 0), palette_color(palette, 2), std::sin(angle) * 0.5 + 0.5);
                 level = 0.12 + (std::cos(angle) * 0.5 + 0.5) * 0.73;
             } else if (scene_id_ == "traffic") {
-                color = pair_segment % 3U == 0U ? Rgb{255,0,0} : pair_segment % 3U == 1U ? Rgb{255,180,0} : Rgb{0,255,0};
+                color = palette_color(palette, pair_segment % 3U);
                 level = pair_segment % 3U == step % 3U ? 0.90 : 0.07;
             } else if (scene_id_ == "gate") {
                 const bool open = context.beat.phase < (0.20 + context.mood * 0.25);
@@ -223,7 +210,7 @@ public:
             } else if (scene_id_ == "siren") {
                 const bool left = segment < count / 2U;
                 const bool phase_left = static_cast<std::size_t>(std::floor(context.beat.beat * 2.0)) % 2U == 0U;
-                color = left ? Rgb{255,0,0} : Rgb{0,80,255};
+                color = palette_color(palette, left ? 0U : 1U);
                 level = left == phase_left ? 0.95 : 0.025;
             }
             bar.set_wash(segment, scale(color, context.master * level));
@@ -572,6 +559,8 @@ void RgbSceneMixer::load_scene_definitions_from_file(const std::string& path) {
         definition.intensity = clamp_range(regex_number_field(object, "intensity").value_or(1.0), 0.0, 1.0);
         definition.energy_min = clamp_range(regex_number_field(object, "energy_min").value_or(0.0), 0.0, 1.0);
         definition.energy_max = clamp_range(regex_number_field(object, "energy_max").value_or(1.0), 0.0, 1.0);
+        definition.color_slots = static_cast<std::size_t>(clamp_range(
+            regex_number_field(object, "color_slots").value_or(4.0), 1.0, 8.0));
         if (!definition.id.empty() && !definition.type.empty()) {
             loaded.push_back(std::move(definition));
         }
@@ -602,9 +591,16 @@ void RgbSceneMixer::render(
             RgbSceneContext scene_context = context;
             scene_context.master *= definition->intensity;
             scene_context.beat.beat *= definition->speed;
-            const RgbPalette& scene_palette = definition->palette.empty() || definition->palette == "preset"
+            const RgbPalette& resolved_palette = definition->palette.empty() || definition->palette == "preset"
                 ? palette
                 : palette_by_id(definition->palette);
+            RgbPalette scene_palette = resolved_palette;
+            if (scene_palette.colors.size() > definition->color_slots) {
+                scene_palette.colors.resize(definition->color_slots);
+            }
+            if (scene_palette.color_names.size() > definition->color_slots) {
+                scene_palette.color_names.resize(definition->color_slots);
+            }
             RgbWashBar layer{DmxAddress{1}, static_cast<std::uint8_t>(bar.size())};
             (*renderer)->render(layer, scene_context, scene_palette);
             for (std::size_t segment = 0; segment < bar.size(); ++segment) {

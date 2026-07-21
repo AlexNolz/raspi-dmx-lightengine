@@ -106,6 +106,8 @@ void SimpleEngine::apply_os2l_event(const Os2lEvent& event, const std::chrono::s
             if constexpr (std::is_same_v<Event, Os2lBeatEvent>) {
                 if (typed_event.changed) {
                     music_dynamics_.reset();
+                    show_seed_ ^= static_cast<std::uint64_t>(std::max<std::int64_t>(0, typed_event.position)) +
+                        0x9e3779b97f4a7c15ULL + (show_seed_ << 6U) + (show_seed_ >> 2U);
                 }
                 beat_clock_.on_beat(typed_event, received_at);
                 music_dynamics_.on_beat(typed_event);
@@ -300,6 +302,9 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
 
     const BeatSnapshot beat = beat_clock_.snapshot(now);
     const MusicDynamicsSnapshot dynamics = music_dynamics_.snapshot(beat, static_cast<double>(mood_) / 100.0, preset_);
+    const ShowLayerContext layer_context{
+        beat, dynamics, static_cast<double>(mood_) / 100.0, preset_, show_seed_};
+    const ColorLayerSelection color_selection = color_layer_.resolve(rgb_scenes_, layer_context);
     if (!running_ || blackout_ || blackout_held_) {
         render_safe_moving_head_blackout(frame, !running_ && now < reset_until_);
         return frame;
@@ -317,7 +322,10 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
             const std::array<std::string, 3> standby_led_scenes{"standby_glow", "standby_pairs", "standby_scan"};
             const std::string& standby_scene = standby_led_scenes.at(static_cast<std::size_t>(seconds / 36) % standby_led_scenes.size());
             const RgbSceneContext standby_context{beat, clamp01(master_ * led_master_), 0.28};
-            const RgbPalette& standby_palette = rgb_scenes_.palette_for_preset("club", seconds / 42);
+            ShowLayerContext standby_layer_context = layer_context;
+            standby_layer_context.preset = "club";
+            standby_layer_context.dynamics.section = MusicalSection::calm;
+            const RgbPalette standby_palette = color_layer_.resolve(rgb_scenes_, standby_layer_context).palette;
             rgb_scenes_.render(bar1_, {standby_scene}, standby_context, standby_palette);
             rgb_scenes_.render(bar2_, {standby_scene}, standby_context, standby_palette);
             bar1_.render_to(frame);
@@ -333,7 +341,7 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
             const std::string scene = motion_mode_ == "auto"
                 ? standby_motion_scenes.at(static_cast<std::size_t>(seconds / 45) % standby_motion_scenes.size())
                 : motion_mode_;
-            render_moving_heads(frame, beat, now, scene);
+            render_moving_heads(frame, beat, now, color_selection.palette, scene);
         } else {
             render_safe_moving_head_blackout(frame, false);
         }
@@ -341,7 +349,7 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
     }
     if (!led_layer_enabled_) {
         if (motion_layer_enabled_) {
-            render_moving_heads(frame, beat, now);
+            render_moving_heads(frame, beat, now, color_selection.palette);
         } else {
             render_safe_moving_head_blackout(frame, false);
         }
@@ -352,10 +360,9 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
         clamp01(master_ * led_master_ * (0.72 + dynamics.energy * 0.28)),
         static_cast<double>(mood_) / 100.0,
     };
-    const RgbPalette& palette = rgb_scenes_.palette_for_preset(preset_, beat.position / 16);
     const std::vector<std::string> selected{selected_effect_};
-    rgb_scenes_.render(bar1_, selected, scene_context, palette);
-    rgb_scenes_.render(bar2_, selected, scene_context, palette);
+    rgb_scenes_.render(bar1_, selected, scene_context, color_selection.palette);
+    rgb_scenes_.render(bar2_, selected, scene_context, color_selection.palette);
     if (whiteout_active) {
         bar1_.set_all(Rgb{to_dmx(scene_context.master), to_dmx(scene_context.master), to_dmx(scene_context.master)});
         bar2_.set_all(Rgb{to_dmx(scene_context.master), to_dmx(scene_context.master), to_dmx(scene_context.master)});
@@ -373,11 +380,15 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
         for (std::size_t segment = 0; segment < bar1_.size(); ++segment) {
             const bool left_half = segment < bar1_.size() / 2U;
             const bool active_half = left_half == (flash % 2U == 0U);
-            const std::size_t color_index = (flash / 2U + (left_half ? 0U : 1U)) % 3U;
-            const std::uint8_t value = active_half ? to_dmx(scene_context.master) : 0U;
-            const Rgb color = color_index == 0U ? Rgb{value, 0, 0}
-                : color_index == 1U ? Rgb{0, value, 0}
-                                    : Rgb{0, 0, value};
+            const std::size_t palette_size = std::max<std::size_t>(1U, color_selection.palette.colors.size());
+            const std::size_t color_index = (flash / 2U + (left_half ? 0U : 1U)) % palette_size;
+            Rgb color = color_selection.palette.colors.empty()
+                ? Rgb{255, 255, 255}
+                : color_selection.palette.colors.at(color_index);
+            const double level = active_half ? scene_context.master : 0.0;
+            color.r = to_dmx(static_cast<double>(color.r) / 255.0 * level);
+            color.g = to_dmx(static_cast<double>(color.g) / 255.0 * level);
+            color.b = to_dmx(static_cast<double>(color.b) / 255.0 * level);
             bar1_.set_wash(segment, color);
             bar2_.set_wash(segment, color);
         }
@@ -392,7 +403,7 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
         preview_.at(index + bar1_.size()) = bar2_.wash_color(index);
     }
     if (motion_layer_enabled_) {
-        render_moving_heads(frame, beat, now);
+        render_moving_heads(frame, beat, now, color_selection.palette);
     } else {
         render_safe_moving_head_blackout(frame, false);
     }
@@ -403,6 +414,12 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
     std::lock_guard lock{mutex_};
     const BeatSnapshot beat = beat_clock_.snapshot(now);
     const MusicDynamicsSnapshot dynamics = music_dynamics_.snapshot(beat, static_cast<double>(mood_) / 100.0, preset_);
+    const ShowLayerContext layer_context{
+        beat, dynamics, static_cast<double>(mood_) / 100.0, preset_, show_seed_};
+    const ColorLayerSelection color_selection = color_layer_.resolve(rgb_scenes_, layer_context);
+    const std::string resolved_motion_scene = motion_mode_ == "auto"
+        ? scene_layer_planner_.select_motion_scene(active_scenes_, motion_scenes_, layer_context)
+        : motion_mode_;
     const double os2l_age = last_os2l_at_ == std::chrono::steady_clock::time_point{}
         ? -1.0
         : std::chrono::duration<double>(now - last_os2l_at_).count();
@@ -429,6 +446,16 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(,"reset_active":)" << json_bool(!running_ && now < reset_until_)
         << R"(,"standby":)" << json_bool(running_ && (last_music_beat_at_ == std::chrono::steady_clock::time_point{} || now - last_music_beat_at_ > std::chrono::seconds{4}))
         << R"(,"last_error":"")";
+
+    out << R"(,"layer_state":{"rgb_scene":")" << selected_effect_
+        << R"(","motion_scene":")" << resolved_motion_scene
+        << R"(","palette":")" << color_selection.palette.id
+        << R"(","palette_label":")" << color_selection.palette.label
+        << R"(","color_hold_beats":)" << color_selection.hold_beats
+        << R"(,"color_epoch":)" << color_selection.epoch
+        << R"(,"color_slots":)";
+    json_string_array(out, color_selection.palette.color_names);
+    out << '}';
 
     out << R"(,"config":{"artnet_host":")" << config_.artnet_host
         << R"(","artnet_universe":)" << config_.artnet_universe
@@ -555,58 +582,16 @@ void SimpleEngine::render_moving_heads(
     DmxFrame& frame,
     const BeatSnapshot& beat,
     const std::chrono::steady_clock::time_point now,
+    const RgbPalette& palette,
     const std::string_view scene_override) {
     const double mood = static_cast<double>(mood_) / 100.0;
     const double beat_hit = motion_beat_pulse_enabled_ ? std::exp(-beat.phase * (3.0 + mood * 6.0)) : 0.0;
     const MusicDynamicsSnapshot dynamics = music_dynamics_.snapshot(beat, mood, preset_);
+    const ShowLayerContext layer_context{beat, dynamics, mood, preset_, show_seed_};
 
     std::string scene = scene_override.empty() ? motion_mode_ : std::string{scene_override};
     if (scene == "auto") {
-        if (active_scenes_.empty()) {
-            scene = "center_pulse";
-        } else {
-            std::vector<std::string> preferred;
-            if (selected_effect_ == "split" || selected_effect_ == "siren" || selected_effect_ == "party_siren" || selected_effect_ == "traffic") {
-                preferred = {"techno_left_right", "techno_cross_hits", "split_strobe", "cross_pairs", "side_pingpong"};
-            } else if (selected_effect_ == "blocks" || selected_effect_ == "pair_swap" || selected_effect_ == "pair_punch" ||
-                selected_effect_ == "binary" || selected_effect_ == "gate") {
-                preferred = {"techno_left_right", "techno_cross_hits", "corner_swap", "pair_random", "x_cross"};
-            } else if (selected_effect_ == "peak_blocks") {
-                preferred = {"techno_left_right", "hardstyle_double_hits", "split_strobe", "x_cross", "gobo_chase"};
-            } else if (selected_effect_ == "ball" || selected_effect_ == "scanner" || selected_effect_ == "comet") {
-                preferred = {"gobo_chase", "line_sweep", "point_chase"};
-            } else if (selected_effect_ == "rainbow" || selected_effect_ == "theater" || selected_effect_ == "zipper" ||
-                selected_effect_ == "orbit" || selected_effect_ == "fill") {
-                preferred = {"color_fan", "depth_sweep", "pair_orbit"};
-            } else if (selected_effect_ == "sparkle" || selected_effect_ == "strobe" || mood > 0.86) {
-                preferred = {"x_cross", "all_random", "duo_random", "split_strobe"};
-            } else {
-                preferred = {"center_pulse", "point_chase", "depth_sweep"};
-            }
-            std::vector<std::string> pool;
-            for (const std::string& candidate : preferred) {
-                const MotionSceneDefinition* candidate_definition = motion_scenes_.find(candidate);
-                const bool energy_matches = candidate_definition == nullptr ||
-                    (dynamics.energy >= candidate_definition->energy_min && dynamics.energy <= candidate_definition->energy_max);
-                if (energy_matches && std::find(active_scenes_.begin(), active_scenes_.end(), candidate) != active_scenes_.end()) {
-                    pool.push_back(candidate);
-                }
-            }
-            if (pool.empty()) {
-                for (const std::string& candidate : active_scenes_) {
-                    const MotionSceneDefinition* candidate_definition = motion_scenes_.find(candidate);
-                    if (candidate_definition == nullptr ||
-                        (dynamics.energy >= candidate_definition->energy_min && dynamics.energy <= candidate_definition->energy_max)) {
-                        pool.push_back(candidate);
-                    }
-                }
-            }
-            if (pool.empty()) {
-                pool.push_back("center_pulse");
-            }
-            const auto phrase = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 16);
-            scene = pool.at(phrase % pool.size());
-        }
+        scene = scene_layer_planner_.select_motion_scene(active_scenes_, motion_scenes_, layer_context);
     }
 
     const MotionSceneDefinition* definition = motion_scenes_.find(scene);
@@ -624,7 +609,7 @@ void SimpleEngine::render_moving_heads(
         const MotionTarget target = definition == nullptr
             ? MotionTarget{}
             : motion_scenes_.evaluate(
-                  *definition, index, moving_head_starts_.size(), beat, mood, 0x4c49474854ULL, motion_beat_pulse_enabled_);
+                  *definition, index, moving_head_starts_.size(), beat, mood, show_seed_, motion_beat_pulse_enabled_);
         const double pan_width = moving_head_profile_.pan_width - target.y * 0.03;
         const double pan = std::clamp(
             moving_head_profile_.pan_center + (target.x - 0.5) * pan_width,
@@ -638,19 +623,12 @@ void SimpleEngine::render_moving_heads(
         look.tilt = to_dmx(tilt);
         const double level = (0.41 + mood * 0.53 + beat_hit * (0.06 + mood * 0.25)) * target.dimmer_scale;
 
-        const RgbPalette& head_palette = rgb_scenes_.palette_for_preset(preset_, beat.position / 16);
-        const std::int64_t color_hold_beats = dynamics.highpoint() ? 2 :
-            dynamics.section == MusicalSection::buildup ? 8 : 16;
-        const auto color_step = static_cast<std::size_t>(
-            std::max<std::int64_t>(0, beat.position) / color_hold_beats);
-        if (!head_palette.color_names.empty()) {
-            const std::string& color_name = head_palette.color_names.at(
-                (color_step + index / 2U) % head_palette.color_names.size());
+        if (!palette.color_names.empty()) {
+            const std::string& color_name = palette.color_names.at((index / 2U) % palette.color_names.size());
             look.color_wheel = moving_head_profile_.color_value(color_name).value_or(
-                moving_head_profile_.colors.at((color_step + index / 2U) % moving_head_profile_.colors.size()).value);
+                moving_head_profile_.colors.at((index / 2U) % moving_head_profile_.colors.size()).value);
         } else {
-            look.color_wheel = moving_head_profile_.colors.at(
-                (color_step + index / 2U) % moving_head_profile_.colors.size()).value;
+            look.color_wheel = moving_head_profile_.colors.at((index / 2U) % moving_head_profile_.colors.size()).value;
         }
         if (manual_color_enabled_) {
             look.color_wheel = manual_color_use_raw_
@@ -658,40 +636,16 @@ void SimpleEngine::render_moving_heads(
                 : moving_head_profile_.color_value(selected_color_).value_or(look.color_wheel);
         }
 
-        std::uint8_t selected_gobo = moving_head_profile_.gobo_value("open").value_or(0);
-        if (gobo_enabled_) {
-            if (gobo_mode_ == "static") {
-                selected_gobo = moving_head_profile_.gobo_value(selected_gobo_).value_or(selected_gobo);
-            } else if (gobo_mode_ == "musical") {
-                const std::int64_t hold_beats = dynamics.highpoint() ? 1 :
-                    dynamics.section == MusicalSection::buildup ? 8 : 16;
-                const auto step = static_cast<std::size_t>(
-                    std::max<std::int64_t>(0, beat.position) / hold_beats);
-                selected_gobo = moving_head_profile_.gobos.at(
-                    (step * 5U + (index / 2U) * 3U) % moving_head_profile_.gobos.size()).value;
-            } else if (gobo_mode_ == "phrase_random") {
-                const auto phrase = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 16);
-                selected_gobo = moving_head_profile_.gobos.at(
-                    (phrase * 5U + index * 3U) % moving_head_profile_.gobos.size()).value;
-            } else if (gobo_mode_ == "random_beat") {
-                const auto step = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position));
-                selected_gobo = moving_head_profile_.gobos.at(
-                    (step * 5U + index * 3U + 1U) % moving_head_profile_.gobos.size()).value;
-            } else {
-                const auto step = static_cast<std::size_t>(std::max<std::int64_t>(0, beat.position) / 2);
-                selected_gobo = moving_head_profile_.gobos.at((step + index) % moving_head_profile_.gobos.size()).value;
-            }
-            const bool highpoint = dynamics.highpoint();
-            if (gobo_highpoint_only_ && !highpoint) {
-                selected_gobo = moving_head_profile_.gobo_value("open").value_or(0);
-            }
-            const std::uint8_t open_gobo = moving_head_profile_.gobo_value("open").value_or(0);
-            if (gobo_shake_enabled_ && definition != nullptr && definition->allow_shake && dynamics.highpoint() &&
-                selected_gobo != open_gobo && mood >= gobo_shake_mood_threshold_) {
-                selected_gobo = static_cast<std::uint8_t>(std::min(127, static_cast<int>(selected_gobo) + 64));
-            }
-        }
-        look.gobo = selected_gobo;
+        const GoboLayerRequest gobo_request{
+            gobo_enabled_,
+            gobo_mode_,
+            selected_gobo_,
+            gobo_highpoint_only_,
+            gobo_shake_enabled_,
+            gobo_shake_mood_threshold_,
+            definition != nullptr && definition->allow_shake,
+        };
+        look.gobo = gobo_layer_.resolve(moving_head_profile_, layer_context, gobo_request, index).value;
         double final_level = clamp01(level * master_ * motion_master_);
         const bool whiteout_active = whiteout_held_ || now < whiteout_until_;
         const bool strobe_out_active = strobe_out_held_ || now < strobe_out_until_;
@@ -744,24 +698,18 @@ void SimpleEngine::select_next_effect_locked(const MusicDynamicsSnapshot* dynami
         selected_effect_ = "peak_blocks";
         return;
     }
-    const auto current = std::find(active_effects_.begin(), active_effects_.end(), selected_effect_);
-    const std::size_t start = current == active_effects_.end()
-        ? 0U
-        : (static_cast<std::size_t>(std::distance(active_effects_.begin(), current)) + 1U) % active_effects_.size();
-    for (std::size_t offset = 0; offset < active_effects_.size(); ++offset) {
-        const std::string& candidate = active_effects_.at((start + offset) % active_effects_.size());
-        const auto definition = std::find_if(
-            rgb_scenes_.scene_definitions().begin(),
-            rgb_scenes_.scene_definitions().end(),
-            [&](const RgbSceneDefinition& scene) { return scene.id == candidate; });
-        const bool energy_matches = dynamics == nullptr || definition == rgb_scenes_.scene_definitions().end() ||
-            (dynamics->energy >= definition->energy_min && dynamics->energy <= definition->energy_max);
-        if (energy_matches) {
-            selected_effect_ = candidate;
-            return;
-        }
+    const auto now = std::chrono::steady_clock::now();
+    const BeatSnapshot beat = beat_clock_.snapshot(now);
+    const MusicDynamicsSnapshot current_dynamics = dynamics == nullptr
+        ? music_dynamics_.snapshot(beat, static_cast<double>(mood_) / 100.0, preset_)
+        : *dynamics;
+    if (dynamics == nullptr) {
+        ++manual_selection_nonce_;
     }
-    selected_effect_ = active_effects_.front();
+    const ShowLayerContext context{
+        beat, current_dynamics, static_cast<double>(mood_) / 100.0, preset_, show_seed_};
+    selected_effect_ = scene_layer_planner_.select_rgb_scene(
+        active_effects_, rgb_scenes_.scene_definitions(), context, manual_selection_nonce_);
 }
 
 std::string SimpleEngine::active_effect_label_locked() const {

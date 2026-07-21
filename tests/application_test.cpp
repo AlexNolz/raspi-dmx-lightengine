@@ -7,6 +7,7 @@
 #include "lightengine/music_dynamics.hpp"
 #include "lightengine/project.hpp"
 #include "lightengine/rgb_scene.hpp"
+#include "lightengine/show_layers.hpp"
 #include "lightengine/simple_engine.hpp"
 
 #include <iostream>
@@ -389,6 +390,31 @@ int main() {
                 return 1;
             }
         }
+
+        const lightengine::ShowLayerContext calm_layers{
+            lightengine::BeatSnapshot{1.0, 0.0, 1, 112.0, 0.5, true, false},
+            lightengine::MusicDynamicsSnapshot{lightengine::MusicalSection::calm, 0.38, 0.35, 0.0, false, false},
+            0.38,
+            "warmup",
+            12345U,
+        };
+        const lightengine::ColorLayer color_layer;
+        const lightengine::ColorLayerSelection first_colors = color_layer.resolve(mixer, calm_layers);
+        const lightengine::ColorLayerSelection repeated_colors = color_layer.resolve(mixer, calm_layers);
+        if (first_colors.hold_beats != 64 || first_colors.palette.id != repeated_colors.palette.id ||
+            first_colors.palette.color_names != repeated_colors.palette.color_names ||
+            first_colors.palette.colors != repeated_colors.palette.colors) {
+            std::cerr << "Color layer was not stable for a calm musical section\n";
+            return 1;
+        }
+
+        const lightengine::SceneLayerPlanner planner;
+        const std::string calm_scene = planner.select_rgb_scene(
+            {"strobe", "breathe"}, mixer.scene_definitions(), calm_layers);
+        if (calm_scene != "breathe") {
+            std::cerr << "Scene layer allowed a peak-only effect during a calm section\n";
+            return 1;
+        }
     }
 
     {
@@ -542,7 +568,23 @@ int main() {
         engine.apply_control_command(lightengine::ApplyPresetCommand{"warmup"});
         engine.apply_os2l_event(lightengine::Os2lBeatEvent{1, 112.0, 0.5, false, false}, now);
         const lightengine::DmxFrame coordinated = engine.render_frame(now);
-        if (coordinated.at(2) < 130U || coordinated.at(54) != 56U) {
+        const std::string coordinated_state = engine.state_json(now);
+        const bool shared_first_color =
+            (coordinated_state.find(R"("color_slots":["white")") != std::string::npos && coordinated.at(54) == 8U) ||
+            (coordinated_state.find(R"("color_slots":["red")") != std::string::npos && coordinated.at(54) == 24U) ||
+            ((coordinated_state.find(R"("color_slots":["cyan")") != std::string::npos ||
+                coordinated_state.find(R"("color_slots":["teal")") != std::string::npos) && coordinated.at(54) == 40U) ||
+            ((coordinated_state.find(R"("color_slots":["amber")") != std::string::npos ||
+                coordinated_state.find(R"("color_slots":["orange")") != std::string::npos) && coordinated.at(54) == 56U) ||
+            (coordinated_state.find(R"("color_slots":["blue")") != std::string::npos && coordinated.at(54) == 72U) ||
+            ((coordinated_state.find(R"("color_slots":["yellow")") != std::string::npos ||
+                coordinated_state.find(R"("color_slots":["acid")") != std::string::npos) && coordinated.at(54) == 88U) ||
+            (coordinated_state.find(R"("color_slots":["green")") != std::string::npos && coordinated.at(54) == 104U) ||
+            ((coordinated_state.find(R"("color_slots":["uv")") != std::string::npos ||
+                coordinated_state.find(R"("color_slots":["magenta")") != std::string::npos ||
+                coordinated_state.find(R"("color_slots":["pink")") != std::string::npos) && coordinated.at(54) == 120U);
+        if ((coordinated.at(2) == 0U && coordinated.at(3) == 0U && coordinated.at(4) == 0U) ||
+            !shared_first_color || coordinated_state.find(R"("layer_state":{"rgb_scene":)") == std::string::npos) {
             std::cerr << "Warm-up LED flood and moving-head palette colors were not coordinated: LED="
                       << static_cast<int>(coordinated.at(2)) << " head=" << static_cast<int>(coordinated.at(54)) << '\n';
             return 1;
@@ -563,7 +605,9 @@ int main() {
         const std::uint8_t next_peak_gobo = engine.render_frame(now).at(55);
         if (calm_gobo >= 64U || peak_gobo < 64U || next_peak_gobo < 64U || next_peak_gobo == peak_gobo ||
             engine.state_json(now).find(R"("music_section":"peak")") == std::string::npos) {
-            std::cerr << "Gobo shaking was not restricted to a predicted musical peak\n";
+            std::cerr << "Gobo shaking was not restricted to a predicted musical peak: calm="
+                      << static_cast<int>(calm_gobo) << " peak=" << static_cast<int>(peak_gobo)
+                      << " next=" << static_cast<int>(next_peak_gobo) << '\n';
             return 1;
         }
     }

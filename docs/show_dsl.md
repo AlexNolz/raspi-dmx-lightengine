@@ -15,6 +15,39 @@ Die Grenze ist bewusst klar:
 - `shows/rgb_scenes.json`: RGB-/LED-Bar-Szenen.
 - `shows/moving_head_scenes.json`: Moving-Head-Szenen.
 
+## Laufzeit-Layer
+
+Die Engine kombiniert vier voneinander getrennte Ebenen. Keine Ebene schreibt direkt
+ArtNet; erst die Fixture-Abstraktion übersetzt das Ergebnis nach DMX.
+
+```text
+Preset + Mood + Musikdynamik
+          |
+          +-- LED-Szenen-Layer (Muster mit Farbe 1..4)
+          +-- Moving-Layer (Positionen und Dimmerbewegung)
+          +-- Farb-Layer (eine gemeinsame Palette für alle Fixtures)
+          +-- Gobo-Layer (Muster, Wechselrate und Shake)
+                              |
+                       Fixture-Abstraktion -> DMX -> ArtNet
+```
+
+LED-Szene und Moving-Head-Szene werden unabhängig aus den im Preset erlaubten
+Sammlungen gewählt. Dadurch kann dasselbe LED-Muster mit mehreren Bewegungen vorkommen.
+Die Auswahl bleibt innerhalb einer 16-Beat-Phrase stabil. Effekte mit
+`"energy_min": 0.85` oder höher werden automatisch nur bei einem erkannten Peak gewählt.
+
+Der Farb-Layer ist von beiden Szenen unabhängig und liefert beiden Fixture-Arten dieselbe
+sortierte Palette. Seine Wechselrate folgt der Songphase:
+
+- ruhig: 64 Beats
+- Groove: 32 Beats
+- Aufbau: 16 Beats
+- Peak: 8 Beats
+- Abbau: 32 Beats
+
+Der Gobo-Layer hält Muster ruhig 16 Beats, im Aufbau 8 Beats und am Peak 1 Beat.
+Shake ist zusätzlich an Peak, Mood-Schwelle und `allow_shake` der Moving-Szene gebunden.
+
 ## Farbpaletten
 
 Eine Palette ist eine feste Sammlung zusammenpassender Farben:
@@ -37,14 +70,14 @@ Beispiel ZKYMZL:
   "channel": 5,
   "type": "wheel",
   "colors": {
-    "white": 3,
-    "red": 11,
-    "cyan": 18,
-    "amber": 25,
-    "blue": 70,
-    "yellow": 80,
-    "green": 90,
-    "magenta": 100
+    "white": 8,
+    "red": 24,
+    "cyan": 40,
+    "amber": 56,
+    "blue": 72,
+    "yellow": 88,
+    "green": 104,
+    "magenta": 120
   }
 }
 ```
@@ -65,12 +98,15 @@ Wenn eine Szene `"palette": "preset"` nutzt, wählt die Engine passend zum aktiv
   "name": "Neon Chase",
   "type": "chase",
   "palette": "preset",
+  "color_slots": 3,
   "speed": 1.15,
   "intensity": 0.62
 }
 ```
 
-Unterstützte RGB-Typen:
+`color_slots` bedeutet nicht feste RGB-Werte, sondern `Farbe 1`, `Farbe 2` usw. aus
+der gerade aktiven Palette. Unterstützte RGB-Typen stehen in `shows/rgb_scenes.json`;
+zu den grundlegenden Bausteinen gehören:
 
 - `static_glow`: ruhiger Grundlook
 - `beat_pulse`: Beat-Hit von der Mitte
@@ -80,34 +116,26 @@ Unterstützte RGB-Typen:
 
 ## Moving-Head-Szenen
 
-Moving-Head-Szenen sollen dieselbe Idee nutzen: JSON beschreibt Zielpositionen, Dimmer, Farbe, Gobo und Strobe-Verhalten.
+Moving-Head-Szenen beschreiben nur Position, Bewegung, Dimmer und ob ein starker
+Gobo-Effekt grundsätzlich erlaubt ist. Farbe und konkretes Gobo liefert der jeweilige
+separate Layer.
 
 ```json
 {
   "id": "mh_cross_sweep",
   "name": "Cross Sweep",
-  "type": "position_chase",
-  "fixtures": "moving_heads",
-  "palette": "preset",
-  "positions": [
-    { "pan": 70, "tilt": 95, "label": "left_front" },
-    { "pan": 186, "tilt": 95, "label": "right_front" }
-  ],
-  "motion": { "mode": "sine", "speed": 0.5, "spread": 0.25 },
-  "dimmer": { "mode": "constant", "value": 0.65 },
-  "color": { "mode": "palette_step", "every_beats": 8 },
-  "gobo": { "mode": "static", "name": "open" },
-  "strobe": { "mode": "off" }
+  "type": "sine_pan",
+  "points": [[0.50, 0.65]],
+  "speed_low": 0.28,
+  "speed_high": 0.84,
+  "x_amount": 0.36,
+  "y_amount": 0.13,
+  "dimmer_min": 0.55,
+  "dimmer_max": 1.0,
+  "energy_min": 0.42,
+  "allow_shake": false
 }
 ```
-
-Geplante Moving-Head-Typen:
-
-- `position_pulse`: feste Position, Dimmer pulst auf Beat
-- `position_chase`: Fixtures laufen phasenversetzt durch Positionen
-- `beat_hits`: kurze Beat-Hits mit Farbe/Gobo-Wechsel
-- `fan`: Pan/Tilt-Fächer über mehrere Fixtures
-- `circle`: Kreis-/Acht-Bewegung, später mit Kalibrierung
 
 ## Gobo Wheels
 
@@ -159,5 +187,5 @@ Presets wählen keine DMX-Kanäle direkt. Sie aktivieren Szenen:
 Damit bleibt die Abstraktion sauber:
 
 ```text
-Preset -> Szenen -> Fixture-Abstraktion -> DMX Frame -> ArtNet
+Preset + Mood + Musik -> Layer-Auswahl -> Fixture-Abstraktion -> DMX Frame -> ArtNet
 ```

@@ -16,6 +16,7 @@ const os2lStatus = document.querySelector("#os2lStatus");
 const bpmStatus = document.querySelector("#bpmStatus");
 const energyStatus = document.querySelector("#energyStatus");
 const effectStatus = document.querySelector("#effectStatus");
+const layerStatus = document.querySelector("#layerStatus");
 const targetStatus = document.querySelector("#targetStatus");
 const mood = document.querySelector("#mood");
 const moodValue = document.querySelector("#moodValue");
@@ -90,6 +91,9 @@ function render(state) {
   const strengthHint = state.beat_strength_available ? " · VDJ-Dynamik" : " · Phrasenmodell";
   energyStatus.textContent = `${sectionLabels[state.music_section] || state.music_section} ${Math.round((state.music_energy ?? 0.5) * 100)}%${strengthHint}`;
   effectStatus.textContent = state.active_effect_label;
+  const layerState = state.layer_state || {};
+  const colors = Array.isArray(layerState.color_slots) ? layerState.color_slots.join(" + ") : "Farben";
+  layerStatus.textContent = `${layerState.palette_label || "Palette"}: ${colors} · ${layerState.motion_scene || "Bewegung"}`;
   targetStatus.textContent = artnetTarget;
 
   mood.value = config.mood;

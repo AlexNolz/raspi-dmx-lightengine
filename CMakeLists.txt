@@ -35,6 +35,7 @@ target_sources(
         src/music_dynamics.cpp
         src/motion_scene.cpp
         src/rgb_scene.cpp
+        src/show_layers.cpp
         src/simple_engine.cpp
         src/os2l_event.cpp
         src/os2l_receiver.cpp
@@ -49,6 +50,7 @@ target_sources(
         include/lightengine/fixture_runtime.hpp
         include/lightengine/music_dynamics.hpp
         include/lightengine/motion_scene.hpp
+        include/lightengine/show_layers.hpp
         include/lightengine/simple_engine.hpp
         include/lightengine/os2l_event.hpp
         include/lightengine/os2l_receiver.hpp
