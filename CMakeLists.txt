@@ -16,6 +16,8 @@ option(LIGHTENGINE_BUILD_TESTS "Build the light engine tests" ON)
 option(LIGHTENGINE_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 set(LIGHTENGINE_RASPI_DEPLOY_HOST "root@raspi-dmx" CACHE STRING "SSH target used by the deploy-raspi target")
 set(LIGHTENGINE_RASPI_DEPLOY_DIR "/tmp/light-engine-deploy" CACHE STRING "Temporary directory on the Raspberry Pi")
+set(LIGHTENGINE_DEFAULT_ARTNET_HOST "192.168.137.2" CACHE STRING "Default ArtNet target for local run/debug targets")
+set(LIGHTENGINE_DEFAULT_ARTNET_UNIVERSE "0" CACHE STRING "Default ArtNet universe for local run/debug targets")
 
 include(GNUInstallDirs)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
@@ -117,8 +119,8 @@ add_custom_target(
         "${CMAKE_CURRENT_SOURCE_DIR}/web"
         0.0.0.0
         9996
-        127.0.0.1
-        0
+        "${LIGHTENGINE_DEFAULT_ARTNET_HOST}"
+        "${LIGHTENGINE_DEFAULT_ARTNET_UNIVERSE}"
     DEPENDS light-engine
     USES_TERMINAL
     COMMENT "Running the simple C++ light engine on http://127.0.0.1:8088"

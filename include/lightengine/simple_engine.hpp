@@ -40,6 +40,7 @@ public:
 
 private:
     void apply_preset_locked(const std::string& preset);
+    void render_parked_moving_heads(DmxFrame& frame, bool output_enabled) const;
 
     mutable std::mutex mutex_;
     SimpleEngineConfig config_;

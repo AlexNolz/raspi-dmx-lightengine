@@ -288,6 +288,11 @@ int main() {
     {
         lightengine::SimpleEngine engine{lightengine::SimpleEngineConfig{}};
         const auto now = std::chrono::steady_clock::now();
+        const lightengine::DmxFrame stopped_frame = engine.render_frame(now);
+        if (stopped_frame.at(50) != 85 || stopped_frame.at(52) != 176 || stopped_frame.at(58) != 140) {
+            std::cerr << "SimpleEngine did not park moving heads while stopped\n";
+            return 1;
+        }
         engine.apply_control_command(lightengine::SetRunningCommand{true});
         engine.apply_os2l_event(lightengine::Os2lBeatEvent{12, 100.0, 0.8, false}, now);
         const lightengine::DmxFrame frame = engine.render_frame(now);

@@ -24,7 +24,7 @@
         "${workspaceFolder}/web",
         "0.0.0.0",
         "9996",
-        "127.0.0.1",
+        "192.168.137.2",
         "0"
       ],
       "cwd": "${workspaceFolder}",
