@@ -3,6 +3,19 @@
   "cmake.cmakePath": "${workspaceFolder}/.tools/cmake-python/cmake/data/bin/cmake",
   "cmake.configureOnOpen": true,
   "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
+  "cmake.debugConfig": {
+    "args": [
+      "--run-simple-engine",
+      "127.0.0.1",
+      "8088",
+      "${workspaceFolder}/web",
+      "0.0.0.0",
+      "9996",
+      "127.0.0.1",
+      "0"
+    ],
+    "cwd": "${workspaceFolder}"
+  },
   "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
   "C_Cpp.intelliSenseEngine": "default",
   "files.associations": {
