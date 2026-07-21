@@ -60,10 +60,11 @@
 
         <div class="panel output-control">
           <h2>Moving Heads</h2>
-          <label class="switch-row"><input id="motionEnabled" type="checkbox"><span>Moving Heads eingeschaltet</span></label>
+          <p class="safety-note">Sicherheitssperre aktiv: erst nach dem DMX-Einzelkanaltest freigeben.</p>
+          <label class="switch-row"><input id="motionEnabled" type="checkbox" disabled><span>Moving Heads eingeschaltet</span></label>
           <label>
             <span>Helligkeit</span>
-            <input id="motionMaster" type="range" min="0" max="100" step="1">
+            <input id="motionMaster" type="range" min="0" max="100" step="1" disabled>
             <output id="motionMasterValue">100</output>
           </label>
         </div>
@@ -83,16 +84,17 @@
 
         <div class="panel gobo-control">
           <h2>Gobos</h2>
-          <label class="switch-row"><input id="goboEnabled" type="checkbox"><span>Gobos aktiv</span></label>
-          <label class="switch-row danger"><input id="goboHighpointOnly" type="checkbox"><span>Nur bei Hochpunkt</span></label>
-          <label class="switch-row arm"><input id="goboShakeEnabled" type="checkbox"><span>Shake/Rotation erlauben</span></label>
+          <p class="safety-note">Zurzeit gesperrt, weil das Moving-Head-Profil noch nicht am echten Gerät bestätigt ist.</p>
+          <label class="switch-row"><input id="goboEnabled" type="checkbox" disabled><span>Gobos aktiv</span></label>
+          <label class="switch-row danger"><input id="goboHighpointOnly" type="checkbox" disabled><span>Nur bei Hochpunkt</span></label>
+          <label class="switch-row arm"><input id="goboShakeEnabled" type="checkbox" disabled><span>Shake/Rotation erlauben</span></label>
           <label>
             <span>Modus</span>
-            <select id="goboMode"></select>
+            <select id="goboMode" disabled></select>
           </label>
           <label>
             <span>Shake ab Mood</span>
-            <input id="goboShakeMood" type="range" min="0" max="100" step="1">
+            <input id="goboShakeMood" type="range" min="0" max="100" step="1" disabled>
             <output id="goboShakeMoodValue">62</output>
           </label>
         </div>

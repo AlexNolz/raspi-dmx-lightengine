@@ -341,6 +341,13 @@ output {
   min-height: 36px;
 }
 
+.safety-note {
+  margin: 0 0 12px;
+  color: #ffbf69;
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
 .artnet {
   display: grid;
   grid-template-columns: 1.2fr 0.55fr 0.55fr 0.55fr auto;

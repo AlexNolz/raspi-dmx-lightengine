@@ -289,6 +289,7 @@ int main(int argc, char** argv) {
                 web.start();
                 std::thread output_thread{[&] {
                     using clock = std::chrono::steady_clock;
+                    bool was_output_active = false;
                     lightengine::ArtNetEndpoint active_endpoint{
                         argv[7],
                         6454,
@@ -305,8 +306,12 @@ int main(int argc, char** argv) {
                             std::cout << "ArtNet target changed to " << active_endpoint.host
                                       << " universe " << active_endpoint.universe.value() << '\n';
                         }
-                        artnet.send(engine.render_frame(started));
-                        engine.mark_artnet_packet_sent();
+                        const bool output_active = engine.output_active();
+                        if (output_active || was_output_active) {
+                            artnet.send(engine.render_frame(started));
+                            engine.mark_artnet_packet_sent();
+                        }
+                        was_output_active = output_active;
                         std::this_thread::sleep_until(started + std::chrono::milliseconds{25});
                     }
                 }};

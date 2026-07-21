@@ -140,6 +140,7 @@ function render(state) {
       button.type = "button";
       button.dataset.motionMode = key;
       button.textContent = label;
+      button.disabled = true;
       button.addEventListener("click", () => send({ action: "set_motion_mode", motion_mode: key }));
       return button;
     }));
@@ -157,6 +158,7 @@ function render(state) {
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.dataset.motionScene = key;
+      checkbox.disabled = true;
       checkbox.addEventListener("change", () => {
         send({ action: "toggle_motion_scene", scene: key, enabled: checkbox.checked });
       });

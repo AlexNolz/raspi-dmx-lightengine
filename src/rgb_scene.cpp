@@ -468,9 +468,8 @@ void RgbSceneMixer::render(
             RgbSceneContext scene_context = context;
             scene_context.master *= definition->intensity;
             scene_context.beat.beat *= definition->speed;
-            const auto palette_seed = definition->type == "static_glow" ? context.beat.position / 16 : context.beat.position / 8;
             const RgbPalette& scene_palette = definition->palette.empty() || definition->palette == "preset"
-                ? palette_for_preset(palette.id, palette_seed + static_cast<std::int64_t>(definition_id.size()))
+                ? palette
                 : palette_by_id(definition->palette);
             RgbWashBar layer{DmxAddress{1}, static_cast<std::uint8_t>(bar.size())};
             (*renderer)->render(layer, scene_context, scene_palette);

@@ -1,7 +1,6 @@
 #include "lightengine/simple_engine.hpp"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <sstream>
 #include <variant>
@@ -63,6 +62,12 @@ void SimpleEngine::apply_os2l_event(const Os2lEvent& event, const std::chrono::s
             using Event = std::decay_t<decltype(typed_event)>;
             if constexpr (std::is_same_v<Event, Os2lBeatEvent>) {
                 beat_clock_.on_beat(typed_event, received_at);
+                const bool phrase_boundary = typed_event.position >= 0 && typed_event.position % 16 == 0 &&
+                    typed_event.position != last_effect_change_position_;
+                if (typed_event.changed || phrase_boundary) {
+                    select_next_effect_locked();
+                    last_effect_change_position_ = typed_event.position;
+                }
             } else if constexpr (std::is_same_v<Event, Os2lButtonEvent>) {
                 if (typed_event.name == "blackout") {
                     blackout_held_ = typed_event.pressed;
@@ -72,6 +77,10 @@ void SimpleEngine::apply_os2l_event(const Os2lEvent& event, const std::chrono::s
                     color_strobe_held_ = typed_event.pressed;
                 } else if (typed_event.name == "strobeout") {
                     strobe_out_held_ = typed_event.pressed;
+                } else if (typed_event.name == "next" && typed_event.pressed) {
+                    select_next_effect_locked();
+                } else if (typed_event.name == "fog" && typed_event.pressed && fog_armed_) {
+                    fog_until_ = received_at + std::chrono::milliseconds{1200};
                 }
             }
         },
@@ -104,11 +113,15 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
                 if (typed_command.layer == LayerId::led_bars) {
                     led_layer_enabled_ = typed_command.enabled;
                 } else if (typed_command.layer == LayerId::motion) {
-                    motion_layer_enabled_ = typed_command.enabled;
+                    motion_layer_enabled_ = false;
+                } else if (typed_command.layer == LayerId::fog) {
+                    fog_layer_enabled_ = typed_command.enabled;
                 }
             } else if constexpr (std::is_same_v<Command, SetFixtureArmedCommand>) {
                 if (typed_command.fixture == ArmedFixtureId::strobe) {
                     strobe_armed_ = typed_command.armed;
+                } else {
+                    fog_armed_ = typed_command.armed;
                 }
             } else if constexpr (std::is_same_v<Command, SetStrobeBeatPulseCommand>) {
                 strobe_beat_pulse_ = typed_command.enabled;
@@ -120,15 +133,23 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
                 apply_preset_locked(typed_command.preset);
             } else if constexpr (std::is_same_v<Command, ToggleEffectCommand>) {
                 set_enabled(active_effects_, typed_command.effect, typed_command.enabled);
+                if (active_effects_.empty()) {
+                    active_effects_.push_back("rgb_static");
+                }
+                if (std::find(active_effects_.begin(), active_effects_.end(), selected_effect_) == active_effects_.end()) {
+                    selected_effect_ = active_effects_.front();
+                }
                 preset_ = "custom";
+            } else if constexpr (std::is_same_v<Command, SetMotionModeCommand>) {
+                motion_mode_ = typed_command.motion_mode;
             } else if constexpr (std::is_same_v<Command, ToggleMotionSceneCommand>) {
                 set_enabled(active_scenes_, typed_command.scene, typed_command.enabled);
                 preset_ = "custom";
             } else if constexpr (std::is_same_v<Command, SetGoboControlCommand>) {
-                gobo_enabled_ = typed_command.enabled;
+                gobo_enabled_ = false;
                 gobo_mode_ = typed_command.mode;
                 gobo_highpoint_only_ = typed_command.highpoint_only;
-                gobo_shake_enabled_ = typed_command.shake_enabled;
+                gobo_shake_enabled_ = false;
                 gobo_shake_mood_threshold_ = typed_command.shake_mood_threshold;
                 preset_ = "custom";
             } else if constexpr (std::is_same_v<Command, SetArtNetCommand>) {
@@ -142,6 +163,42 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
                 preview_.assign(static_cast<std::size_t>(config_.segments_per_bar) * 2U, Rgb{});
                 bar1_ = RgbWashBar{DmxAddress{config_.bar1_start}, config_.segments_per_bar};
                 bar2_ = RgbWashBar{DmxAddress{config_.bar2_start}, config_.segments_per_bar};
+            } else if constexpr (std::is_same_v<Command, SetFixtureAddressCommand>) {
+                if (typed_command.fixture == PatchFixtureId::led_bars && typed_command.index < 2U) {
+                    if (typed_command.index == 0U) {
+                        config_.bar1_start = typed_command.start;
+                        bar1_ = RgbWashBar{DmxAddress{config_.bar1_start}, config_.segments_per_bar};
+                    } else {
+                        config_.bar2_start = typed_command.start;
+                        bar2_ = RgbWashBar{DmxAddress{config_.bar2_start}, config_.segments_per_bar};
+                    }
+                } else if (typed_command.fixture == PatchFixtureId::moving_heads && typed_command.index < moving_head_starts_.size()) {
+                    moving_head_starts_.at(typed_command.index) = typed_command.start;
+                } else if (typed_command.fixture == PatchFixtureId::strobe) {
+                    strobe_start_ = typed_command.start;
+                } else if (typed_command.fixture == PatchFixtureId::fog) {
+                    fog_start_ = typed_command.start;
+                }
+            } else if constexpr (std::is_same_v<Command, TriggerCommand>) {
+                const auto now = std::chrono::steady_clock::now();
+                const double default_seconds = typed_command.trigger == LiveTriggerId::whiteout ? 0.8
+                    : typed_command.trigger == LiveTriggerId::fog ? 1.2
+                                                                  : 4.0;
+                const auto duration = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                    std::chrono::duration<double>{typed_command.seconds > 0.0 ? typed_command.seconds : default_seconds});
+                if (typed_command.trigger == LiveTriggerId::next) {
+                    select_next_effect_locked();
+                } else if (typed_command.trigger == LiveTriggerId::whiteout) {
+                    whiteout_until_ = now + duration;
+                } else if (typed_command.trigger == LiveTriggerId::color_strobe) {
+                    color_strobe_until_ = now + duration;
+                } else if (typed_command.trigger == LiveTriggerId::strobe_out) {
+                    strobe_out_until_ = now + duration;
+                } else if (typed_command.trigger == LiveTriggerId::fog && fog_armed_) {
+                    fog_until_ = now + duration;
+                } else if (typed_command.trigger == LiveTriggerId::blackout) {
+                    blackout_ = !blackout_;
+                }
             } else if constexpr (std::is_same_v<Command, SetHoldTriggerCommand>) {
                 if (typed_command.trigger == LiveTriggerId::blackout) {
                     blackout_held_ = typed_command.held;
@@ -163,26 +220,41 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
     std::fill(preview_.begin(), preview_.end(), Rgb{});
     bar1_.clear();
     bar2_.clear();
-    render_safe_moving_head_blackout(frame);
 
-    if (!running_ || blackout_ || blackout_held_ || !led_layer_enabled_) {
+    if (!running_ || blackout_ || blackout_held_) {
         return frame;
     }
 
     const BeatSnapshot beat = beat_clock_.snapshot(now);
+    render_auxiliary_fixtures(frame, beat, now);
+    if (!led_layer_enabled_) {
+        render_safe_moving_head_blackout(frame);
+        return frame;
+    }
     const RgbSceneContext scene_context{
         beat,
         clamp01(master_ * led_master_),
         static_cast<double>(mood_) / 100.0,
     };
     const RgbPalette& palette = rgb_scenes_.palette_for_preset(preset_, beat.position / 16);
-    rgb_scenes_.render(bar1_, active_effects_, scene_context, palette);
-    rgb_scenes_.render(bar2_, active_effects_, scene_context, palette);
-    if (whiteout_held_ || strobe_out_held_) {
+    const std::vector<std::string> selected{selected_effect_};
+    rgb_scenes_.render(bar1_, selected, scene_context, palette);
+    rgb_scenes_.render(bar2_, selected, scene_context, palette);
+    const bool whiteout_active = whiteout_held_ || now < whiteout_until_;
+    const bool strobe_out_active = strobe_out_held_ || now < strobe_out_until_;
+    const bool color_strobe_active = color_strobe_held_ || now < color_strobe_until_;
+    if (whiteout_active) {
         bar1_.set_all(Rgb{to_dmx(scene_context.master), to_dmx(scene_context.master), to_dmx(scene_context.master)});
         bar2_.set_all(Rgb{to_dmx(scene_context.master), to_dmx(scene_context.master), to_dmx(scene_context.master)});
-    } else if (color_strobe_held_) {
-        const auto beat_index = static_cast<std::size_t>(std::floor(beat.beat));
+    } else if (strobe_out_active) {
+        const double hz = 1.5 + strobe_speed_ * 12.5;
+        const double seconds = std::chrono::duration<double>(now.time_since_epoch()).count();
+        const bool on = static_cast<std::int64_t>(std::floor(seconds * hz * 2.0)) % 2 == 0;
+        const std::uint8_t value = on ? to_dmx(scene_context.master * strobe_master_) : 0;
+        bar1_.set_all(Rgb{value, value, value});
+        bar2_.set_all(Rgb{value, value, value});
+    } else if (color_strobe_active) {
+        const auto beat_index = static_cast<std::size_t>(std::floor(beat.beat * 4.0));
         for (std::size_t segment = 0; segment < bar1_.size(); ++segment) {
             const auto color_index = (segment + beat_index) % 3U;
             const Rgb color = color_index == 0U ? Rgb{to_dmx(scene_context.master), 0, 0}
@@ -201,6 +273,7 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
     for (std::size_t index = 0; index < bar2_.size(); ++index) {
         preview_.at(index + bar1_.size()) = bar2_.wash_color(index);
     }
+    render_safe_moving_head_blackout(frame);
     return frame;
 }
 
@@ -214,8 +287,8 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
     std::ostringstream out;
     out << R"({"running":)" << json_bool(running_)
         << R"(,"blackout":)" << json_bool(blackout_ || blackout_held_)
-        << R"(,"active_effect":")" << (active_effects_.empty() ? std::string{"none"} : active_effects_.front())
-        << R"(","active_effect_label":")" << (active_effects_.empty() ? std::string{"Keine RGB Szene"} : std::string{"RGB Szenen aktiv"})
+        << R"(,"active_effect":")" << selected_effect_
+        << R"(","active_effect_label":")" << active_effect_label_locked()
         << R"(")"
         << R"(,"bpm":)" << beat.bpm
         << R"(,"beat_count":)" << static_cast<std::int64_t>(std::floor(beat.beat))
@@ -237,7 +310,7 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(,"motion_master":)" << motion_master_
         << R"(,"mood":)" << static_cast<int>(mood_)
         << R"(,"preset":")" << preset_
-        << R"(","motion_mode":"auto")"
+        << R"(","motion_mode":")" << motion_mode_ << '"'
         << R"(,"gobo":{"enabled":)" << json_bool(gobo_enabled_)
         << R"(,"mode":")" << gobo_mode_
         << R"(","highpoint_only":)" << json_bool(gobo_highpoint_only_)
@@ -250,19 +323,21 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
     json_string_array(out, active_scenes_);
     out << R"(,"layers":{"led_bars":)" << json_bool(led_layer_enabled_)
         << R"(,"motion":)" << json_bool(motion_layer_enabled_)
-        << R"(,"strobe":false,"fog":false})";
+        << R"(,"strobe":)" << json_bool(strobe_armed_)
+        << R"(,"fog":)" << json_bool(fog_layer_enabled_) << "}";
     out << R"(,"fixtures":{"led_bars":[)"
         << R"({"name":"LED Bar 1","start":)" << config_.bar1_start << R"(,"segments":8,"enabled":true},)"
         << R"({"name":"LED Bar 2","start":)" << config_.bar2_start << R"(,"segments":8,"enabled":true}])"
         << R"(,"moving_heads":[)"
-        << R"({"name":"MH 1","start":51,"channels":11,"enabled":true},)"
-        << R"({"name":"MH 2","start":62,"channels":11,"enabled":true},)"
-        << R"({"name":"MH 3","start":73,"channels":11,"enabled":true},)"
-        << R"({"name":"MH 4","start":84,"channels":11,"enabled":true}])"
-        << R"(,"strobe":{"name":"Stairville 1500W Strobe","start":1,"channels":2,"enabled":true,"armed":)"
+        << "{\"name\":\"MH 1 - Sicherheitssperre\",\"start\":" << moving_head_starts_.at(0) << R"(,"channels":11,"enabled":false},)"
+        << "{\"name\":\"MH 2 - Sicherheitssperre\",\"start\":" << moving_head_starts_.at(1) << R"(,"channels":11,"enabled":false},)"
+        << "{\"name\":\"MH 3 - Sicherheitssperre\",\"start\":" << moving_head_starts_.at(2) << R"(,"channels":11,"enabled":false},)"
+        << "{\"name\":\"MH 4 - Sicherheitssperre\",\"start\":" << moving_head_starts_.at(3) << R"(,"channels":11,"enabled":false}])"
+        << R"(,"strobe":{"name":"Stairville 1500W Strobe","start":)" << strobe_start_ << R"(,"channels":2,"enabled":true,"armed":)"
         << json_bool(strobe_armed_) << R"(,"beat_pulse":)" << json_bool(strobe_beat_pulse_)
         << R"(,"master":)" << strobe_master_ << R"(,"speed":)" << strobe_speed_
-        << R"(},"fog":{"name":"unused","start":1,"channels":1,"enabled":false,"armed":false}}})";
+        << R"(},"fog":{"name":"Stairville AF-40 DMX Fog","start":)" << fog_start_
+        << R"(,"channels":1,"enabled":true,"armed":)" << json_bool(fog_armed_) << "}}}";
 
     out << R"(,"effects":)" << rgb_scenes_.effects_json();
     out << R"(,"motion_modes":{"auto":"Auto","center_pulse":"Mitte Pulse","point_chase":"Punkt Chase","line_sweep":"Links/Rechts Sweep","depth_sweep":"Vorne/Hinten Sweep","cross_pairs":"2 Links / 2 Rechts","split_strobe":"Links/Rechts Strobe","x_cross":"X Cross","color_fan":"Color Fan","pair_random":"Paare Random"})";
@@ -296,9 +371,16 @@ ArtNetEndpoint SimpleEngine::artnet_endpoint() const {
     };
 }
 
+bool SimpleEngine::output_active() const {
+    std::lock_guard lock{mutex_};
+    return running_;
+}
+
 void SimpleEngine::render_safe_moving_head_blackout(DmxFrame& frame) const {
-    constexpr std::array<std::uint16_t, 4> starts{51, 62, 73, 84};
-    for (const std::uint16_t start_address : starts) {
+    for (const std::uint16_t start_address : moving_head_starts_) {
+        if (start_address > dmx_channel_count - 10U) {
+            continue;
+        }
         const std::size_t start = DmxAddress{start_address}.zero_based();
         for (std::size_t offset = 0; offset < 11U; ++offset) {
             frame.at(start + offset) = 0;
@@ -306,7 +388,50 @@ void SimpleEngine::render_safe_moving_head_blackout(DmxFrame& frame) const {
     }
 }
 
+void SimpleEngine::render_auxiliary_fixtures(
+    DmxFrame& frame,
+    const BeatSnapshot& beat,
+    const std::chrono::steady_clock::time_point now) const {
+    const bool strobe_out_active = strobe_out_held_ || now < strobe_out_until_;
+    const bool beat_pulse_active = strobe_beat_pulse_ && beat.phase < 0.14;
+    if (strobe_armed_ && strobe_start_ < dmx_channel_count) {
+        const std::size_t start = DmxAddress{strobe_start_}.zero_based();
+        if (strobe_out_active || beat_pulse_active) {
+            frame.at(start) = to_dmx(strobe_speed_);
+            frame.at(start + 1U) = to_dmx(strobe_master_ * master_);
+        }
+    }
+
+    if (fog_layer_enabled_ && fog_armed_ && now < fog_until_ && fog_start_ <= dmx_channel_count) {
+        frame.at(DmxAddress{fog_start_}.zero_based()) = 255;
+    }
+}
+
+void SimpleEngine::select_next_effect_locked() {
+    if (active_effects_.empty()) {
+        active_effects_.push_back("rgb_static");
+    }
+    const auto current = std::find(active_effects_.begin(), active_effects_.end(), selected_effect_);
+    if (current == active_effects_.end() || std::next(current) == active_effects_.end()) {
+        selected_effect_ = active_effects_.front();
+    } else {
+        selected_effect_ = *std::next(current);
+    }
+}
+
+std::string SimpleEngine::active_effect_label_locked() const {
+    const auto definition = std::find_if(
+        rgb_scenes_.scene_definitions().begin(),
+        rgb_scenes_.scene_definitions().end(),
+        [&](const RgbSceneDefinition& scene) { return scene.id == selected_effect_; });
+    return definition == rgb_scenes_.scene_definitions().end() ? selected_effect_ : definition->label;
+}
+
 void SimpleEngine::apply_preset_locked(const std::string& preset) {
+    if (preset == "custom") {
+        preset_ = "custom";
+        return;
+    }
     preset_ = preset;
     if (preset == "rave") {
         mood_ = 88;
@@ -350,6 +475,9 @@ void SimpleEngine::apply_preset_locked(const std::string& preset) {
         gobo_shake_enabled_ = false;
         preset_ = "club";
     }
+    gobo_enabled_ = false;
+    gobo_shake_enabled_ = false;
+    selected_effect_ = active_effects_.front();
 }
 
 }  // namespace lightengine

@@ -289,11 +289,19 @@ int main() {
         lightengine::SimpleEngine engine{lightengine::SimpleEngineConfig{}};
         const auto now = std::chrono::steady_clock::now();
         const lightengine::DmxFrame stopped_frame = engine.render_frame(now);
+        if (engine.output_active()) {
+            std::cerr << "SimpleEngine enabled ArtNet output before Start\n";
+            return 1;
+        }
         if (stopped_frame.at(50) != 0 || stopped_frame.at(52) != 0 || stopped_frame.at(58) != 0) {
             std::cerr << "SimpleEngine did not keep moving heads blacked out while stopped\n";
             return 1;
         }
         engine.apply_control_command(lightengine::SetRunningCommand{true});
+        if (!engine.output_active()) {
+            std::cerr << "SimpleEngine did not enable ArtNet output after Start\n";
+            return 1;
+        }
         engine.apply_os2l_event(lightengine::Os2lBeatEvent{12, 100.0, 0.8, false}, now);
         const lightengine::DmxFrame frame = engine.render_frame(now);
         if (frame.at(2) == 0 && frame.at(3) == 0 && frame.at(4) == 0) {
@@ -302,6 +310,37 @@ int main() {
         }
         if (frame.at(50) != 0 || frame.at(51) != 0 || frame.at(52) != 0 || frame.at(58) != 0) {
             std::cerr << "SimpleEngine moved moving-head channels before the renderer is ready\n";
+            return 1;
+        }
+        engine.apply_control_command(lightengine::TriggerCommand{lightengine::LiveTriggerId::next, 0.0});
+        if (engine.state_json(now).find(R"("active_effect":"rgb_beat_pulse")") == std::string::npos) {
+            std::cerr << "SimpleEngine Next Look did not select the next enabled RGB scene\n";
+            return 1;
+        }
+        engine.apply_control_command(lightengine::ApplyPresetCommand{"custom"});
+        if (engine.state_json(now).find(R"("preset":"custom")") == std::string::npos ||
+            engine.state_json(now).find(R"("active_effect":"rgb_beat_pulse")") == std::string::npos) {
+            std::cerr << "SimpleEngine Custom preset unexpectedly replaced the current show settings\n";
+            return 1;
+        }
+        engine.apply_control_command(lightengine::SetFixtureAddressCommand{
+            lightengine::PatchFixtureId::led_bars, 0, 100});
+        const lightengine::DmxFrame repatched = engine.render_frame(now);
+        if ((repatched.at(99) == 0 && repatched.at(100) == 0 && repatched.at(101) == 0) ||
+            engine.state_json(now).find(R"("name":"LED Bar 1","start":100)") == std::string::npos) {
+            std::cerr << "SimpleEngine did not apply an LED-bar fixture address\n";
+            return 1;
+        }
+        engine.apply_control_command(lightengine::SetFixtureArmedCommand{lightengine::ArmedFixtureId::strobe, true});
+        engine.apply_control_command(lightengine::SetHoldTriggerCommand{lightengine::LiveTriggerId::strobe_out, true});
+        const lightengine::DmxFrame strobe_frame = engine.render_frame(now);
+        if (strobe_frame.at(0) == 0 || strobe_frame.at(1) == 0) {
+            std::cerr << "SimpleEngine did not render the armed strobe fixture\n";
+            return 1;
+        }
+        engine.apply_control_command(lightengine::SetLayerCommand{lightengine::LayerId::motion, true});
+        if (engine.state_json(now).find(R"("motion":false)") == std::string::npos) {
+            std::cerr << "SimpleEngine released the moving-head safety lock\n";
             return 1;
         }
         const std::string state = engine.state_json(now);
