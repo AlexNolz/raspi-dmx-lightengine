@@ -300,6 +300,13 @@ int main() {
             std::cerr << "SimpleEngine state does not expose beat sync\n";
             return 1;
         }
+        engine.apply_control_command(lightengine::SetArtNetCommand{"192.168.137.2", 0, 3, 16});
+        const lightengine::ArtNetEndpoint endpoint = engine.artnet_endpoint();
+        if (endpoint.host != "192.168.137.2" || endpoint.universe.value() != 0 ||
+            engine.state_json(now).find(R"("artnet_host":"192.168.137.2")") == std::string::npos) {
+            std::cerr << "SimpleEngine did not apply ArtNet target changes\n";
+            return 1;
+        }
     }
 
     {

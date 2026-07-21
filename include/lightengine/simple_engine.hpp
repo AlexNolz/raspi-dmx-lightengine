@@ -34,6 +34,7 @@ public:
 
     [[nodiscard]] DmxFrame render_frame(std::chrono::steady_clock::time_point now);
     [[nodiscard]] std::string state_json(std::chrono::steady_clock::time_point now) const;
+    [[nodiscard]] ArtNetEndpoint artnet_endpoint() const;
 
     void mark_artnet_packet_sent();
 

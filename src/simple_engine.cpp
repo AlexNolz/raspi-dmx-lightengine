@@ -130,6 +130,17 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
                 gobo_shake_enabled_ = typed_command.shake_enabled;
                 gobo_shake_mood_threshold_ = typed_command.shake_mood_threshold;
                 preset_ = "custom";
+            } else if constexpr (std::is_same_v<Command, SetArtNetCommand>) {
+                config_.artnet_host = typed_command.host.empty() ? std::string{"127.0.0.1"} : typed_command.host;
+                config_.artnet_universe = typed_command.universe;
+                config_.segments_per_bar = static_cast<std::uint8_t>(std::max(1U, static_cast<unsigned>(typed_command.segment_count) / 2U));
+                const auto total_channels = static_cast<std::uint16_t>(config_.segments_per_bar * 2U * 3U);
+                const auto max_start = static_cast<std::uint16_t>(dmx_channel_count - total_channels + 1U);
+                config_.bar1_start = std::min(typed_command.led_start_channel, max_start);
+                config_.bar2_start = static_cast<std::uint16_t>(config_.bar1_start + config_.segments_per_bar * 3U);
+                preview_.assign(static_cast<std::size_t>(config_.segments_per_bar) * 2U, Rgb{});
+                bar1_ = RgbWashBar{DmxAddress{config_.bar1_start}, config_.segments_per_bar};
+                bar2_ = RgbWashBar{DmxAddress{config_.bar2_start}, config_.segments_per_bar};
             } else if constexpr (std::is_same_v<Command, SetHoldTriggerCommand>) {
                 if (typed_command.trigger == LiveTriggerId::blackout) {
                     blackout_held_ = typed_command.held;
@@ -272,6 +283,15 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
 void SimpleEngine::mark_artnet_packet_sent() {
     std::lock_guard lock{mutex_};
     ++artnet_packets_;
+}
+
+ArtNetEndpoint SimpleEngine::artnet_endpoint() const {
+    std::lock_guard lock{mutex_};
+    return ArtNetEndpoint{
+        config_.artnet_host,
+        6454,
+        ArtNetUniverse{config_.artnet_universe},
+    };
 }
 
 void SimpleEngine::apply_preset_locked(const std::string& preset) {
