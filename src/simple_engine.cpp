@@ -647,7 +647,8 @@ void SimpleEngine::render_moving_heads(
                   *definition, index, moving_head_starts_.size(), beat, mood, show_seed_, motion_beat_pulse_enabled_);
         const double pan_width = moving_head_profile_.pan_width - target.y * 0.03;
         const double pan = std::clamp(
-            moving_head_profile_.pan_center + (target.x - 0.5) * pan_width,
+            moving_head_profile_.pan_center +
+                (target.x - 0.5) * pan_width * moving_head_profile_.pan_direction,
             std::min(moving_head_profile_.pan_min, moving_head_profile_.pan_max),
             std::max(moving_head_profile_.pan_min, moving_head_profile_.pan_max));
         const double tilt = std::clamp(
