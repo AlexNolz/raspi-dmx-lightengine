@@ -17,6 +17,7 @@
     "cwd": "${workspaceFolder}"
   },
   "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/build/pc-debug/compile_commands.json",
   "C_Cpp.intelliSenseEngine": "default",
   "files.associations": {
     "*.hpp": "cpp"
