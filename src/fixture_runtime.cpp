@@ -181,6 +181,8 @@ Zkymzl11Profile Zkymzl11Profile::load_from_file(const std::string& path) {
     profile.pan_center = number_field(calibration, "pan_center", profile.pan_center);
     profile.pan_width = number_field(calibration, "pan_width", profile.pan_width);
     profile.pan_direction = number_field(calibration, "pan_direction", profile.pan_direction) < 0.0 ? -1.0 : 1.0;
+    profile.left_pan_scale = std::clamp(number_field(calibration, "left_pan_scale", profile.left_pan_scale), 0.0, 1.0);
+    profile.target_y_offset = std::clamp(number_field(calibration, "target_y_offset", profile.target_y_offset), -0.5, 0.5);
     profile.tilt_min = number_field(calibration, "tilt_min", profile.tilt_min);
     profile.tilt_max = number_field(calibration, "tilt_max", profile.tilt_max);
     const std::string reset = object_for_key(object_for_key(text, "capabilities"), "reset");

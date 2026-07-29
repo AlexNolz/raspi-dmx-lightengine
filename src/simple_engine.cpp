@@ -645,14 +645,19 @@ void SimpleEngine::render_moving_heads(
             ? MotionTarget{}
             : motion_scenes_.evaluate(
                   *definition, index, moving_head_starts_.size(), beat, mood, show_seed_, motion_beat_pulse_enabled_);
-        const double pan_width = moving_head_profile_.pan_width - target.y * 0.03;
+        const double calibrated_x = target.x < 0.5
+            ? 0.5 + (target.x - 0.5) * moving_head_profile_.left_pan_scale
+            : target.x;
+        const double calibrated_y = std::clamp(target.y + moving_head_profile_.target_y_offset, 0.0, 1.0);
+        const double pan_width = moving_head_profile_.pan_width - calibrated_y * 0.03;
         const double pan = std::clamp(
             moving_head_profile_.pan_center +
-                (target.x - 0.5) * pan_width * moving_head_profile_.pan_direction,
+                (calibrated_x - 0.5) * pan_width * moving_head_profile_.pan_direction,
             std::min(moving_head_profile_.pan_min, moving_head_profile_.pan_max),
             std::max(moving_head_profile_.pan_min, moving_head_profile_.pan_max));
         const double tilt = std::clamp(
-            moving_head_profile_.tilt_min + (moving_head_profile_.tilt_max - moving_head_profile_.tilt_min) * target.y,
+            moving_head_profile_.tilt_min +
+                (moving_head_profile_.tilt_max - moving_head_profile_.tilt_min) * calibrated_y,
             std::min(moving_head_profile_.tilt_min, moving_head_profile_.tilt_max),
             std::max(moving_head_profile_.tilt_min, moving_head_profile_.tilt_max));
         look.pan = to_dmx(pan);

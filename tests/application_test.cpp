@@ -259,7 +259,8 @@ int main() {
             profile.color_value("amber") != 56 || profile.color_value("blue") != 72 ||
             profile.color_value("yellow") != 88 || profile.color_value("green") != 104 ||
             profile.color_value("magenta") != 120 || profile.color_test_max != 255 ||
-            profile.pan_direction != -1.0) {
+            profile.pan_direction != -1.0 || profile.left_pan_scale != 0.72 ||
+            profile.target_y_offset != 0.10) {
             std::cerr << "ZKYMZL wheel mappings were not loaded from the fixture JSON\n";
             return 1;
         }

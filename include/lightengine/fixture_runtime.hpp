@@ -80,6 +80,8 @@ struct Zkymzl11Profile final {
     double pan_center{0.333};
     double pan_width{0.30};
     double pan_direction{1.0};
+    double left_pan_scale{1.0};
+    double target_y_offset{};
     double tilt_min{0.56};
     double tilt_max{0.82};
     std::uint8_t reset_value{204};

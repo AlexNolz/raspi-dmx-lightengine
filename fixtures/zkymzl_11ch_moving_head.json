@@ -116,6 +116,8 @@
     "pan_center": 0.333,
     "pan_width": 0.30,
     "pan_direction": -1.0,
+    "left_pan_scale": 0.72,
+    "target_y_offset": 0.10,
     "tilt_min": 0.56,
     "tilt_max": 0.82
   }
