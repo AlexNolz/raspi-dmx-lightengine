@@ -178,6 +178,20 @@ int main() {
     }
 
     {
+        const std::optional<lightengine::ControlCommand> command = lightengine::parse_control_command(
+            R"({"action":"set_rgb_par_zone","linked":false,"mood":27,"scene":"calm_gradient"})");
+        if (!command || !std::holds_alternative<lightengine::SetRgbParZoneCommand>(*command)) {
+            std::cerr << "set_rgb_par_zone command was not parsed\n";
+            return 1;
+        }
+        const auto zone = std::get<lightengine::SetRgbParZoneCommand>(*command);
+        if (zone.linked || zone.mood != 27 || zone.scene != "calm_gradient") {
+            std::cerr << "set_rgb_par_zone command contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
         const std::optional<lightengine::ControlCommand> command =
             lightengine::parse_control_command(R"({"action":"set_output_master","target":"motion_master","value":0.42})");
         if (!command || !std::holds_alternative<lightengine::SetOutputMasterCommand>(*command)) {
@@ -257,6 +271,20 @@ int main() {
         const auto address = std::get<lightengine::SetFixtureAddressCommand>(*command);
         if (address.fixture != lightengine::PatchFixtureId::moving_heads || address.index != 2 || address.start != 73) {
             std::cerr << "set_fixture_address command contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
+        const std::optional<lightengine::ControlCommand> command =
+            lightengine::parse_control_command(R"({"action":"set_fixture_address","fixture":"rgb_pars","index":1,"start":110})");
+        if (!command || !std::holds_alternative<lightengine::SetFixtureAddressCommand>(*command)) {
+            std::cerr << "RGB PAR set_fixture_address command was not parsed\n";
+            return 1;
+        }
+        const auto address = std::get<lightengine::SetFixtureAddressCommand>(*command);
+        if (address.fixture != lightengine::PatchFixtureId::rgb_pars || address.index != 1 || address.start != 110) {
+            std::cerr << "RGB PAR set_fixture_address command contains wrong values\n";
             return 1;
         }
     }
@@ -484,6 +512,30 @@ int main() {
     }
 
     {
+        lightengine::RgbParSceneLibrary scenes;
+        scenes.load_from_file("shows/rgb_par_scenes.json");
+        const lightengine::BeatSnapshot beat{32.0, 0.0, 32, 120.0, 0.7, true};
+        const lightengine::RgbParSceneDefinition* gradient = scenes.find("calm_gradient");
+        if (scenes.scenes().size() < 8U || gradient == nullptr ||
+            scenes.select_auto(0.2, beat, 42U).mood_max < 0.2) {
+            std::cerr << "RGB PAR JSON scene library is incomplete\n";
+            return 1;
+        }
+        const lightengine::RgbParSceneOutput output = scenes.evaluate(
+            *gradient,
+            beat,
+            0.25,
+            lightengine::RgbPalette{"test", "Test", {"red", "green", "blue"},
+                {lightengine::Rgb{255, 0, 0}, lightengine::Rgb{0, 255, 0}, lightengine::Rgb{0, 0, 255}}});
+        if (output.colors.at(0) == output.colors.at(1) || output.colors.at(1) == output.colors.at(2) ||
+            output.colors.at(0) == output.colors.at(2) ||
+            output.master_scale <= 0.0 || output.master_scale >= 1.0) {
+            std::cerr << "RGB PAR gradient scene rendered an invalid zone look\n";
+            return 1;
+        }
+    }
+
+    {
         lightengine::MotionSceneLibrary motions;
         motions.load_from_file("shows/moving_head_scenes.json");
         const lightengine::BeatSnapshot beat{16.0, 0.0, 16, 120.0, 1.0, true};
@@ -499,6 +551,28 @@ int main() {
                 std::cerr << "Moving-head scene generated an invalid target: " << scene.id << '\n';
                 return 1;
             }
+        }
+    }
+
+    {
+        lightengine::SimpleEngine zone_engine{lightengine::SimpleEngineConfig{}};
+        const auto now = std::chrono::steady_clock::now();
+        zone_engine.apply_control_command(lightengine::SetRunningCommand{true});
+        zone_engine.apply_control_command(lightengine::SetLayerCommand{lightengine::LayerId::led_bars, false});
+        zone_engine.apply_control_command(lightengine::SetRgbParZoneCommand{false, 25, "calm_gradient"});
+        const lightengine::DmxFrame independent = zone_engine.render_frame(now);
+        if (independent.at(99) == 0 || independent.at(109) == 0 || independent.at(119) == 0 ||
+            independent.at(103) != 0 || independent.at(104) != 0 || independent.at(105) != 0 ||
+            zone_engine.state_json(now).find(R"("rgb_par_zone":{"linked":false,"mood":25,"scene":"calm_gradient")") ==
+                std::string::npos) {
+            std::cerr << "Independent RGB PAR zone did not stay active with its own scene and mood\n";
+            return 1;
+        }
+        zone_engine.apply_control_command(lightengine::SetRgbParZoneCommand{true, 25, "auto"});
+        const lightengine::DmxFrame linked = zone_engine.render_frame(now);
+        if (linked.at(99) != 0 || linked.at(100) != 0 || linked.at(101) != 0 || linked.at(102) != 0) {
+            std::cerr << "Linked RGB PAR zone did not follow the disabled dance-floor LED layer\n";
+            return 1;
         }
     }
 

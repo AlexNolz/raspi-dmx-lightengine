@@ -1,0 +1,88 @@
+{
+  "schema": "lightengine.rgb_par_scenes.v1",
+  "id": "default_rgb_par_scenes",
+  "name": "Fluterzone",
+  "fixture_order": ["left", "center", "right"],
+  "scenes": [
+    {
+      "id": "calm_solid",
+      "name": "Ruhige Fläche",
+      "type": "solid",
+      "mood_min": 0.0,
+      "mood_max": 0.42,
+      "rate_beats": 32,
+      "dimmer_min": 0.30,
+      "dimmer_max": 0.62
+    },
+    {
+      "id": "calm_gradient",
+      "name": "Ruhiger Farbverlauf",
+      "type": "gradient",
+      "mood_min": 0.0,
+      "mood_max": 0.62,
+      "rate_beats": 32,
+      "dimmer_min": 0.34,
+      "dimmer_max": 0.68
+    },
+    {
+      "id": "calm_sides",
+      "name": "Außen / Mitte",
+      "type": "sides",
+      "mood_min": 0.15,
+      "mood_max": 0.72,
+      "rate_beats": 16,
+      "dimmer_min": 0.35,
+      "dimmer_max": 0.72
+    },
+    {
+      "id": "slow_breathe",
+      "name": "Langsames Atmen",
+      "type": "breathe",
+      "mood_min": 0.0,
+      "mood_max": 0.68,
+      "rate_beats": 16,
+      "dimmer_min": 0.24,
+      "dimmer_max": 0.66
+    },
+    {
+      "id": "slow_wave",
+      "name": "Langsame Welle links–rechts",
+      "type": "slow_wave",
+      "mood_min": 0.28,
+      "mood_max": 0.82,
+      "rate_beats": 12,
+      "dimmer_min": 0.40,
+      "dimmer_max": 0.78
+    },
+    {
+      "id": "wide_alternate",
+      "name": "Breiter Seitenwechsel",
+      "type": "alternate",
+      "mood_min": 0.55,
+      "mood_max": 1.0,
+      "rate_beats": 4,
+      "dimmer_min": 0.48,
+      "dimmer_max": 0.88
+    },
+    {
+      "id": "soft_chase",
+      "name": "Weicher Lauf links–mitte–rechts",
+      "type": "chase",
+      "mood_min": 0.68,
+      "mood_max": 1.0,
+      "rate_beats": 2,
+      "dimmer_min": 0.50,
+      "dimmer_max": 0.92
+    },
+    {
+      "id": "zone_beat",
+      "name": "Gemeinsamer Beat-Puls",
+      "type": "beat_pulse",
+      "mood_min": 0.82,
+      "mood_max": 1.0,
+      "rate_beats": 1,
+      "dimmer_min": 0.20,
+      "dimmer_max": 1.0
+    }
+  ]
+}

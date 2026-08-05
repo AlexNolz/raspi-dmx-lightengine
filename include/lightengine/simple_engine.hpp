@@ -10,6 +10,7 @@
 #include "lightengine/motion_scene.hpp"
 #include "lightengine/music_dynamics.hpp"
 #include "lightengine/project.hpp"
+#include "lightengine/rgb_par_scene.hpp"
 #include "lightengine/rgb_scene.hpp"
 #include "lightengine/show_layers.hpp"
 
@@ -57,7 +58,7 @@ private:
         const RgbPalette& palette,
         std::string_view scene_override = {});
     void render_auxiliary_fixtures(DmxFrame& frame, const BeatSnapshot& beat, std::chrono::steady_clock::time_point now) const;
-    void render_rgb_pars(DmxFrame& frame) const;
+    void render_rgb_pars(DmxFrame& frame, const BeatSnapshot& beat, const RgbPalette& palette) const;
 
     mutable std::mutex mutex_;
     SimpleEngineConfig config_;
@@ -82,6 +83,7 @@ private:
     bool gobo_fast_peak_enabled_{true};
     bool manual_color_enabled_{false};
     bool manual_color_use_raw_{false};
+    bool rgb_par_zone_linked_{false};
     double master_{1.0};
     double led_master_{1.0};
     double motion_master_{1.0};
@@ -95,6 +97,8 @@ private:
     std::string selected_gobo_{"open"};
     std::string selected_color_{"white"};
     std::uint8_t manual_color_value_{8};
+    std::uint8_t rgb_par_zone_mood_{35};
+    std::string rgb_par_zone_scene_{"auto"};
     std::vector<std::string> active_effects_{"breathe", "pulse", "comet"};
     std::string selected_effect_{"breathe"};
     std::vector<std::string> active_scenes_{"center_pulse"};
@@ -118,6 +122,7 @@ private:
     RgbWashBar bar1_;
     RgbWashBar bar2_;
     RgbSceneMixer rgb_scenes_;
+    RgbParSceneLibrary rgb_par_scenes_;
     MotionSceneLibrary motion_scenes_;
     ColorLayer color_layer_;
     SceneLayerPlanner scene_layer_planner_;

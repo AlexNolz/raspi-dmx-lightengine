@@ -21,6 +21,7 @@ fixtures/
 
 shows/
   default.json
+  rgb_par_scenes.json
 ```
 
 `fixtures/collection.json` is the default fixture set loaded by the current
@@ -35,3 +36,13 @@ FixtureDefinition + FixturePatch
   -> semantic commands such as set_color/look_at/pulse
   -> DMX channel writes
 ```
+
+The three RGB PARs form a second lighting zone in physical order:
+
+```text
+DMX 100 (left) -> DMX 110 (center) -> DMX 120 (right)
+```
+
+In linked mode, this zone samples the dance-floor LED looks. In independent
+mode, it selects a JSON-defined scene from `shows/rgb_par_scenes.json` using
+its own zone mood. The global master and blackout still apply to both zones.

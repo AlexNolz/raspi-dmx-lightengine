@@ -296,6 +296,9 @@ std::optional<PatchFixtureId> parse_patch_fixture_id(const std::string& value) {
     if (value == "led_bars") {
         return PatchFixtureId::led_bars;
     }
+    if (value == "rgb_pars") {
+        return PatchFixtureId::rgb_pars;
+    }
     if (value == "moving_heads") {
         return PatchFixtureId::moving_heads;
     }
@@ -416,6 +419,13 @@ std::optional<ControlCommand> parse_control_command(const std::string& payload) 
             field_u8_clamped(*fields, "raw_value", 8, 0, 255),
         };
     }
+    if (action == "set_rgb_par_zone") {
+        return SetRgbParZoneCommand{
+            field_bool(*fields, "linked").value_or(false),
+            field_u8_clamped(*fields, "mood", 35, 0, 100),
+            field_string(*fields, "scene").value_or("auto"),
+        };
+    }
     if (action == "trigger") {
         const auto trigger = parse_live_trigger_id(field_string(*fields, "name").value_or("next"));
         if (!trigger) {
@@ -510,6 +520,9 @@ const char* control_command_type_name(const ControlCommand& command) noexcept {
     }
     if (std::holds_alternative<SetColorWheelCommand>(command)) {
         return "set_color_wheel";
+    }
+    if (std::holds_alternative<SetRgbParZoneCommand>(command)) {
+        return "set_rgb_par_zone";
     }
     if (std::holds_alternative<TriggerCommand>(command)) {
         return "trigger";

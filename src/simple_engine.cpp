@@ -62,6 +62,7 @@ SimpleEngine::SimpleEngine(SimpleEngineConfig config)
       bar2_{DmxAddress{config_.bar2_start}, config_.segments_per_bar} {
     rgb_scenes_.load_palettes_from_file("shows/color_palettes.json");
     rgb_scenes_.load_scene_definitions_from_file("shows/rgb_scenes.json");
+    rgb_par_scenes_.load_from_file("shows/rgb_par_scenes.json");
     motion_scenes_.load_from_file("shows/moving_head_scenes.json");
     moving_head_profile_ = Zkymzl11Profile::load_from_file("fixtures/zkymzl_11ch_moving_head.json");
     for (const FixtureWheelSlot& gobo : moving_head_profile_.gobos) {
@@ -261,6 +262,13 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
                     static_cast<int>(typed_command.raw_value),
                     static_cast<int>(moving_head_profile_.color_test_min),
                     static_cast<int>(moving_head_profile_.color_test_max)));
+            } else if constexpr (std::is_same_v<Command, SetRgbParZoneCommand>) {
+                rgb_par_zone_linked_ = typed_command.linked;
+                rgb_par_zone_mood_ = typed_command.mood;
+                rgb_par_zone_scene_ =
+                    typed_command.scene == "auto" || rgb_par_scenes_.find(typed_command.scene) != nullptr
+                    ? typed_command.scene
+                    : "auto";
             } else if constexpr (std::is_same_v<Command, SetArtNetCommand>) {
                 config_.artnet_host = typed_command.host.empty() ? std::string{"127.0.0.1"} : typed_command.host;
                 config_.artnet_universe = typed_command.universe;
@@ -281,6 +289,10 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
                         config_.bar2_start = typed_command.start;
                         bar2_ = RgbWashBar{DmxAddress{config_.bar2_start}, config_.segments_per_bar};
                     }
+                } else if (typed_command.fixture == PatchFixtureId::rgb_pars &&
+                    typed_command.index < rgb_par_starts_.size() &&
+                    typed_command.start <= dmx_channel_count - 3U) {
+                    rgb_par_starts_.at(typed_command.index) = typed_command.start;
                 } else if (typed_command.fixture == PatchFixtureId::moving_heads && typed_command.index < moving_head_starts_.size()) {
                     moving_head_starts_.at(typed_command.index) = typed_command.start;
                 } else if (typed_command.fixture == PatchFixtureId::strobe) {
@@ -362,12 +374,12 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
             rgb_scenes_.render(bar2_, {standby_scene}, standby_context, standby_palette);
             bar1_.render_to(frame);
             bar2_.render_to(frame);
-            render_rgb_pars(frame);
             for (std::size_t index = 0; index < bar1_.size(); ++index) {
                 preview_.at(index) = bar1_.wash_color(index);
                 preview_.at(index + bar1_.size()) = bar2_.wash_color(index);
             }
         }
+        render_rgb_pars(frame, beat, color_selection.palette);
         if (motion_layer_enabled_) {
             const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
             const std::array<std::string, 3> standby_motion_scenes{"standby_sweep", "standby_depth", "standby_orbit"};
@@ -381,6 +393,7 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
         return frame;
     }
     if (!led_layer_enabled_) {
+        render_rgb_pars(frame, beat, color_selection.palette);
         if (motion_layer_enabled_) {
             render_moving_heads(frame, beat, now, color_selection.palette);
         } else {
@@ -428,7 +441,7 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
     }
     bar1_.render_to(frame);
     bar2_.render_to(frame);
-    render_rgb_pars(frame);
+    render_rgb_pars(frame, beat, color_selection.palette);
 
     for (std::size_t index = 0; index < bar1_.size(); ++index) {
         preview_.at(index) = bar1_.wash_color(index);
@@ -451,6 +464,10 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
     const ShowLayerContext layer_context{
         beat, dynamics, static_cast<double>(mood_) / 100.0, preset_, show_seed_, color_selection_nonce_};
     const ColorLayerSelection color_selection = color_layer_.resolve(rgb_scenes_, layer_context, active_palettes_);
+    const double rgb_par_mood = static_cast<double>(rgb_par_zone_mood_) / 100.0;
+    const RgbParSceneDefinition& resolved_rgb_par_scene = rgb_par_zone_scene_ == "auto"
+        ? rgb_par_scenes_.select_auto(rgb_par_mood, beat, show_seed_)
+        : *rgb_par_scenes_.find(rgb_par_zone_scene_);
     const std::string resolved_motion_scene = motion_mode_ == "auto"
         ? scene_layer_planner_.select_motion_scene(active_scenes_, motion_scenes_, layer_context)
         : motion_mode_;
@@ -500,6 +517,10 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(,"motion_master":)" << motion_master_
         << R"(,"led_beat_pulse":)" << json_bool(std::find(active_effects_.begin(), active_effects_.end(), "pulse") != active_effects_.end())
         << R"(,"motion_beat_pulse":)" << json_bool(motion_beat_pulse_enabled_)
+        << R"(,"rgb_par_zone":{"linked":)" << json_bool(rgb_par_zone_linked_)
+        << R"(,"mood":)" << static_cast<int>(rgb_par_zone_mood_)
+        << R"(,"scene":")" << rgb_par_zone_scene_
+        << R"(","resolved_scene":")" << resolved_rgb_par_scene.id << R"("})"
         << R"(,"mood":)" << static_cast<int>(mood_)
         << R"(,"preset":")" << preset_
         << R"(","motion_mode":")" << motion_mode_ << '"'
@@ -563,6 +584,7 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
     wheel_slots_json(out, moving_head_profile_.gobos);
     out << R"(,"moving_head_colors":)";
     wheel_slots_json(out, moving_head_profile_.colors);
+    out << R"(,"rgb_par_scenes":)" << rgb_par_scenes_.labels_json();
     out << R"(,"presets":[)";
     for (std::size_t index = 0; index < project_.presets.size(); ++index) {
         if (index != 0U) {
@@ -739,17 +761,30 @@ void SimpleEngine::render_auxiliary_fixtures(
     }
 }
 
-void SimpleEngine::render_rgb_pars(DmxFrame& frame) const {
-    const std::array<Rgb, 3> colors{
+void SimpleEngine::render_rgb_pars(
+    DmxFrame& frame,
+    const BeatSnapshot& beat,
+    const RgbPalette& palette) const {
+    std::array<Rgb, 3> colors{
         bar1_.wash_color(0),
         bar1_.wash_color(bar1_.size() / 2U),
         bar2_.wash_color(bar2_.size() - 1U),
     };
+    std::uint8_t par_master = 255;
+    if (!rgb_par_zone_linked_) {
+        const double mood = static_cast<double>(rgb_par_zone_mood_) / 100.0;
+        const RgbParSceneDefinition& scene = rgb_par_zone_scene_ == "auto"
+            ? rgb_par_scenes_.select_auto(mood, beat, show_seed_)
+            : *rgb_par_scenes_.find(rgb_par_zone_scene_);
+        const RgbParSceneOutput output = rgb_par_scenes_.evaluate(scene, beat, mood, palette);
+        colors = output.colors;
+        par_master = to_dmx(master_ * output.master_scale);
+    }
     for (std::size_t index = 0; index < rgb_par_starts_.size(); ++index) {
         const Rgb color = colors.at(index);
         const bool visible = color.r != 0U || color.g != 0U || color.b != 0U;
         RgbPar{DmxAddress{rgb_par_starts_.at(index)}}.render_to(
-            frame, RgbParLook{visible ? static_cast<std::uint8_t>(255) : static_cast<std::uint8_t>(0), color});
+            frame, RgbParLook{visible ? par_master : static_cast<std::uint8_t>(0), color});
     }
 }
 

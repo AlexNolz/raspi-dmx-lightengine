@@ -40,6 +40,7 @@ target_sources(
         src/os2l_event.cpp
         src/os2l_receiver.cpp
         src/project.cpp
+        src/rgb_par_scene.cpp
         src/web_server.cpp
         include/lightengine/artnet_sender.hpp
         include/lightengine/beat_clock.hpp
@@ -55,6 +56,7 @@ target_sources(
         include/lightengine/os2l_event.hpp
         include/lightengine/os2l_receiver.hpp
         include/lightengine/project.hpp
+        include/lightengine/rgb_par_scene.hpp
         include/lightengine/rgb_scene.hpp
         include/lightengine/version.hpp
         include/lightengine/web_server.hpp

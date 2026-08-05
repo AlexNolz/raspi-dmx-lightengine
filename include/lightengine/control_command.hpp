@@ -41,6 +41,7 @@ enum class LiveTriggerId {
 
 enum class PatchFixtureId {
     led_bars,
+    rgb_pars,
     moving_heads,
     strobe,
     fog,
@@ -140,6 +141,12 @@ struct SetColorWheelCommand final {
     std::uint8_t raw_value{8};
 };
 
+struct SetRgbParZoneCommand final {
+    bool linked{false};
+    std::uint8_t mood{35};
+    std::string scene{"auto"};
+};
+
 struct TriggerCommand final {
     LiveTriggerId trigger{LiveTriggerId::next};
     double seconds{0.0};
@@ -188,6 +195,7 @@ using ControlCommand = std::variant<
     ToggleGoboPatternCommand,
     SetGoboControlCommand,
     SetColorWheelCommand,
+    SetRgbParZoneCommand,
     TriggerCommand,
     SetHoldTriggerCommand,
     SetArtNetCommand,

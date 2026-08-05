@@ -9,6 +9,7 @@ let motionScenesBuilt = false;
 let goboModesBuilt = false;
 let gobosBuilt = false;
 let movingHeadColorsBuilt = false;
+let parScenesBuilt = false;
 let rigBuilt = false;
 let pendingSlider = null;
 
@@ -29,6 +30,11 @@ const motionMaster = document.querySelector("#motionMaster");
 const motionMasterValue = document.querySelector("#motionMasterValue");
 const ledEnabled = document.querySelector("#ledEnabled");
 const ledBeatPulse = document.querySelector("#ledBeatPulse");
+const parZoneLinked = document.querySelector("#parZoneLinked");
+const parZoneMood = document.querySelector("#parZoneMood");
+const parZoneMoodValue = document.querySelector("#parZoneMoodValue");
+const parZoneScene = document.querySelector("#parZoneScene");
+const parZoneStatus = document.querySelector("#parZoneStatus");
 const motionEnabled = document.querySelector("#motionEnabled");
 const motionBeatPulse = document.querySelector("#motionBeatPulse");
 const strobeArmed = document.querySelector("#strobeArmed");
@@ -120,6 +126,25 @@ function render(state) {
   const strobeConfig = (config.fixtures && config.fixtures.strobe) || {};
   ledEnabled.checked = Boolean(config.layers && config.layers.led_bars);
   ledBeatPulse.checked = Boolean(config.led_beat_pulse);
+  const parZoneConfig = config.rgb_par_zone || {};
+  if (!parScenesBuilt && state.rgb_par_scenes) {
+    parScenesBuilt = true;
+    parZoneScene.replaceChildren(...Object.entries(state.rgb_par_scenes).map(([key, label]) => {
+      const option = document.createElement("option");
+      option.value = key;
+      option.textContent = label;
+      return option;
+    }));
+  }
+  parZoneLinked.checked = Boolean(parZoneConfig.linked);
+  parZoneMood.value = parZoneConfig.mood ?? 35;
+  parZoneMoodValue.textContent = parZoneMood.value;
+  parZoneScene.value = parZoneConfig.scene || "auto";
+  parZoneMood.disabled = parZoneLinked.checked;
+  parZoneScene.disabled = parZoneLinked.checked;
+  parZoneStatus.textContent = parZoneLinked.checked
+    ? "Eine große Zone · folgt der Tanzfläche vollständig"
+    : `Eigene Zone · aktiv: ${(state.rgb_par_scenes && state.rgb_par_scenes[parZoneConfig.resolved_scene]) || parZoneConfig.resolved_scene || "Automatik"}`;
   motionEnabled.checked = Boolean(config.layers && config.layers.motion);
   motionBeatPulse.checked = Boolean(config.motion_beat_pulse);
   strobeArmed.checked = Boolean(strobeConfig.armed);
@@ -351,6 +376,9 @@ function buildRig(config) {
   (fixtures.led_bars || []).forEach((bar, index) => {
     cards.push(fixtureCard(bar.name || `LED Bar ${index + 1}`, "led_bars", index, bar.start));
   });
+  (fixtures.rgb_pars || []).forEach((par, index) => {
+    cards.push(fixtureCard(par.name || `RGB PAR ${index + 1}`, "rgb_pars", index, par.start));
+  });
   (fixtures.moving_heads || []).forEach((head, index) => {
     cards.push(fixtureCard(head.name || `MH ${index + 1}`, "moving_heads", index, head.start));
   });
@@ -371,6 +399,8 @@ function syncRig(config) {
     let start = null;
     if (fixture === "led_bars") {
       start = fixtures.led_bars && fixtures.led_bars[index] && fixtures.led_bars[index].start;
+    } else if (fixture === "rgb_pars") {
+      start = fixtures.rgb_pars && fixtures.rgb_pars[index] && fixtures.rgb_pars[index].start;
     } else if (fixture === "moving_heads") {
       start = fixtures.moving_heads && fixtures.moving_heads[index] && fixtures.moving_heads[index].start;
     } else if (fixtures[fixture]) {
@@ -413,6 +443,27 @@ ledEnabled.addEventListener("change", () => {
 
 ledBeatPulse.addEventListener("change", () => {
   send({ action: "set_beat_pulse", target: "led", enabled: ledBeatPulse.checked });
+});
+
+function sendParZone() {
+  send({
+    action: "set_rgb_par_zone",
+    linked: parZoneLinked.checked,
+    mood: Number(parZoneMood.value),
+    scene: parZoneScene.value || "auto"
+  });
+}
+
+parZoneLinked.addEventListener("change", sendParZone);
+parZoneScene.addEventListener("change", sendParZone);
+parZoneMood.addEventListener("input", () => {
+  parZoneMoodValue.textContent = parZoneMood.value;
+  queueSlider({
+    action: "set_rgb_par_zone",
+    linked: parZoneLinked.checked,
+    mood: Number(parZoneMood.value),
+    scene: parZoneScene.value || "auto"
+  });
 });
 
 motionEnabled.addEventListener("change", () => {

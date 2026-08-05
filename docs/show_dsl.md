@@ -196,3 +196,19 @@ Damit bleibt die Abstraktion sauber:
 ```text
 Preset + Mood + Musik -> Layer-Auswahl -> Fixture-Abstraktion -> DMX Frame -> ArtNet
 ```
+
+## RGB-Fluterzone
+
+Die PAR-Fluter sind eine eigene Zone und stehen physisch in der Reihenfolge
+links (100), Mitte (110), rechts (120). Ihre Bewegungsmuster werden in
+`shows/rgb_par_scenes.json` beschrieben. Eine Szene definiert:
+
+- den Mustertyp, zum Beispiel `gradient`, `slow_wave` oder `chase`
+- den erlaubten Mood-Bereich für die automatische Auswahl
+- die Geschwindigkeit in Beats
+- minimale und maximale Helligkeit
+
+Im gekoppelten Modus folgen die PARs den LED-Bars der Tanzfläche. Im getrennten
+Modus verwendet die Zone ihren eigenen Mood und eine automatische oder manuell
+gewählte PAR-Szene. Farben kommen weiterhin aus der gemeinsamen Farbpalette,
+damit beide Bereiche auch bei unterschiedlicher Intensität zusammenpassen.
