@@ -46,6 +46,7 @@ void print_usage() {
         << "Usage:\n"
         << "  light-engine\n"
         << "  light-engine --artnet-test <ipv4> <universe>\n"
+        << "  light-engine --artnet-channel <ipv4> <universe> <dmx-channel> <value> [<dmx-channel> <value> ...]\n"
         << "  light-engine --listen-os2l <ipv4> <port>   # TCP OS2L server\n"
         << "  light-engine --serve-web <ipv4> <port> <web-root>\n"
         << "  light-engine --run-simple-engine <web-ip> <web-port> <web-root> <os2l-ip> <os2l-port> <artnet-ip> <universe>\n";
@@ -185,6 +186,31 @@ int main(int argc, char** argv) {
                 }};
                 sender.send(frame);
                 std::cout << "Sent ArtDMX test packet to " << argv[2] << " universe " << argv[3] << '\n';
+                return 0;
+            }
+
+            if (command == "--artnet-channel") {
+                if (argc < 6 || argc % 2 != 0) {
+                    print_usage();
+                    return 2;
+                }
+
+                lightengine::DmxFrame frame{};
+                for (int index = 4; index < argc; index += 2) {
+                    const std::uint16_t channel = parse_u16(argv[index]);
+                    if (channel < 1 || channel > lightengine::dmx_channel_count) {
+                        throw std::out_of_range{"DMX channel must be in range 1..512"};
+                    }
+                    frame.at(static_cast<std::size_t>(channel - 1U)) = parse_u8(argv[index + 1]);
+                }
+                lightengine::ArtNetSender sender{lightengine::ArtNetEndpoint{
+                    argv[2],
+                    6454,
+                    lightengine::ArtNetUniverse{parse_u16(argv[3])},
+                }};
+                sender.send(frame);
+                std::cout << "Sent " << (argc - 4) / 2 << " DMX channel value(s) to "
+                          << argv[2] << " universe " << argv[3] << '\n';
                 return 0;
             }
 

@@ -57,6 +57,7 @@ private:
         const RgbPalette& palette,
         std::string_view scene_override = {});
     void render_auxiliary_fixtures(DmxFrame& frame, const BeatSnapshot& beat, std::chrono::steady_clock::time_point now) const;
+    void render_rgb_pars(DmxFrame& frame) const;
 
     mutable std::mutex mutex_;
     SimpleEngineConfig config_;
@@ -101,6 +102,7 @@ private:
     std::vector<std::string> active_gobos_;
     std::int64_t last_effect_change_position_{-1};
     std::array<std::uint16_t, 4> moving_head_starts_{51, 62, 73, 84};
+    std::array<std::uint16_t, 3> rgb_par_starts_{100, 110, 120};
     std::uint16_t strobe_start_{1};
     std::uint16_t fog_start_{95};
     std::chrono::steady_clock::time_point whiteout_until_{};

@@ -15,6 +15,7 @@ Current layout:
 fixtures/
   collection.json
   rgb_bar_8seg.json
+  generic_rgb_par_7ch.json
   zkymzl_11ch_moving_head.json
   stairville_1500w_strobe_2ch.json
 

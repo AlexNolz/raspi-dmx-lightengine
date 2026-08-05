@@ -141,6 +141,17 @@ Rgb RgbWashBar::wash_color(const std::size_t index) const {
     return washes_.at(index).color();
 }
 
+void RgbPar::render_to(DmxFrame& frame, const RgbParLook& look) const {
+    const std::size_t start = start_address_.zero_based();
+    if (start + 3U >= frame.size()) {
+        throw std::out_of_range{"RGB PAR exceeds the DMX universe"};
+    }
+    frame.at(start + 0U) = look.master;
+    frame.at(start + 1U) = look.color.r;
+    frame.at(start + 2U) = look.color.g;
+    frame.at(start + 3U) = look.color.b;
+}
+
 void Zkymzl11MovingHead::render_to(DmxFrame& frame, const Zkymzl11Look& look) const {
     const std::size_t start = start_address_.zero_based();
     if (start + 10U >= frame.size()) {

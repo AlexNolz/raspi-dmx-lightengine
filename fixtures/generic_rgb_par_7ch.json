@@ -1,0 +1,15 @@
+{
+  "schema": "lightengine.fixture.v1",
+  "id": "generic_rgb_par_7ch",
+  "name": "Generic Chinese RGB PAR (7CH, RGB only)",
+  "kind": "rgb_par",
+  "channels": 7,
+  "capabilities": {
+    "master": { "channel": 1, "type": "intensity", "label": "Master Dimmer" },
+    "red": { "channel": 2, "type": "intensity", "label": "Red" },
+    "green": { "channel": 3, "type": "intensity", "label": "Green" },
+    "blue": { "channel": 4, "type": "intensity", "label": "Blue" }
+  },
+  "unused_channels": [5, 6, 7],
+  "notes": "Channels 5-7 are intentionally kept at zero. The tested channel 5 produced white instead of a usable strobe."
+}

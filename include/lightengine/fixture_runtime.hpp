@@ -51,6 +51,21 @@ private:
     std::vector<RgbWash> washes_;
 };
 
+struct RgbParLook final {
+    std::uint8_t master{};
+    Rgb color{};
+};
+
+class RgbPar final {
+public:
+    explicit RgbPar(DmxAddress start_address) : start_address_{start_address} {}
+
+    void render_to(DmxFrame& frame, const RgbParLook& look) const;
+
+private:
+    DmxAddress start_address_;
+};
+
 struct Zkymzl11Look final {
     std::uint8_t pan{85};
     std::uint8_t tilt{179};

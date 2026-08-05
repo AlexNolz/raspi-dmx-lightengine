@@ -70,6 +70,7 @@ SimpleEngine::SimpleEngine(SimpleEngineConfig config)
     project_ = load_show_project_from_file("shows/default.json");
     std::size_t led_index = 0;
     std::size_t head_index = 0;
+    std::size_t par_index = 0;
     for (const FixturePatch& fixture : project_.patch) {
         if (!fixture.enabled) {
             continue;
@@ -82,6 +83,8 @@ SimpleEngine::SimpleEngine(SimpleEngineConfig config)
             }
         } else if (fixture.fixture_definition_id == "zkymzl_11ch" && head_index < moving_head_starts_.size()) {
             moving_head_starts_.at(head_index++) = fixture.address.value();
+        } else if (fixture.fixture_definition_id == "generic_rgb_par_7ch" && par_index < rgb_par_starts_.size()) {
+            rgb_par_starts_.at(par_index++) = fixture.address.value();
         } else if (fixture.fixture_definition_id == "stairville_1500w_strobe_2ch") {
             strobe_start_ = fixture.address.value();
         } else if (fixture.fixture_definition_id.find("fog") != std::string::npos) {
@@ -359,6 +362,7 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
             rgb_scenes_.render(bar2_, {standby_scene}, standby_context, standby_palette);
             bar1_.render_to(frame);
             bar2_.render_to(frame);
+            render_rgb_pars(frame);
             for (std::size_t index = 0; index < bar1_.size(); ++index) {
                 preview_.at(index) = bar1_.wash_color(index);
                 preview_.at(index + bar1_.size()) = bar2_.wash_color(index);
@@ -424,6 +428,7 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
     }
     bar1_.render_to(frame);
     bar2_.render_to(frame);
+    render_rgb_pars(frame);
 
     for (std::size_t index = 0; index < bar1_.size(); ++index) {
         preview_.at(index) = bar1_.wash_color(index);
@@ -529,6 +534,10 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
     out << R"(,"fixtures":{"led_bars":[)"
         << R"({"name":"LED Bar 1","start":)" << config_.bar1_start << R"(,"segments":8,"enabled":true},)"
         << R"({"name":"LED Bar 2","start":)" << config_.bar2_start << R"(,"segments":8,"enabled":true}])"
+        << R"(,"rgb_pars":[)"
+        << R"({"name":"RGB PAR 1","start":)" << rgb_par_starts_.at(0) << R"(,"channels":4,"enabled":true},)"
+        << R"({"name":"RGB PAR 2","start":)" << rgb_par_starts_.at(1) << R"(,"channels":4,"enabled":true},)"
+        << R"({"name":"RGB PAR 3","start":)" << rgb_par_starts_.at(2) << R"(,"channels":4,"enabled":true}])"
         << R"(,"moving_heads":[)"
         << R"({"name":"MH 1","start":)" << moving_head_starts_.at(0) << R"(,"channels":11,"enabled":true},)"
         << R"({"name":"MH 2","start":)" << moving_head_starts_.at(1) << R"(,"channels":11,"enabled":true},)"
@@ -727,6 +736,20 @@ void SimpleEngine::render_auxiliary_fixtures(
 
     if (fog_layer_enabled_ && fog_armed_ && now < fog_until_ && fog_start_ <= dmx_channel_count) {
         frame.at(DmxAddress{fog_start_}.zero_based()) = 255;
+    }
+}
+
+void SimpleEngine::render_rgb_pars(DmxFrame& frame) const {
+    const std::array<Rgb, 3> colors{
+        bar1_.wash_color(0),
+        bar1_.wash_color(bar1_.size() / 2U),
+        bar2_.wash_color(bar2_.size() - 1U),
+    };
+    for (std::size_t index = 0; index < rgb_par_starts_.size(); ++index) {
+        const Rgb color = colors.at(index);
+        const bool visible = color.r != 0U || color.g != 0U || color.b != 0U;
+        RgbPar{DmxAddress{rgb_par_starts_.at(index)}}.render_to(
+            frame, RgbParLook{visible ? static_cast<std::uint8_t>(255) : static_cast<std::uint8_t>(0), color});
     }
 }
 

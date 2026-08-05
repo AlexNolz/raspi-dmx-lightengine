@@ -142,6 +142,17 @@ int main() {
 
     {
         lightengine::DmxFrame frame{};
+        lightengine::RgbPar par{lightengine::DmxAddress{100}};
+        par.render_to(frame, lightengine::RgbParLook{200, lightengine::Rgb{10, 20, 30}});
+        if (frame.at(99) != 200 || frame.at(100) != 10 || frame.at(101) != 20 || frame.at(102) != 30 ||
+            frame.at(103) != 0 || frame.at(104) != 0 || frame.at(105) != 0) {
+            std::cerr << "RgbPar did not isolate master and RGB from the unused channels\n";
+            return 1;
+        }
+    }
+
+    {
+        lightengine::DmxFrame frame{};
         lightengine::Zkymzl11MovingHead head{lightengine::DmxAddress{51}};
         head.render_to(frame, lightengine::Zkymzl11Look{85, 179, 11, 26, 10, 160, 140, 0});
         if (frame.at(50) != 85 || frame.at(51) != 0 || frame.at(52) != 179 || frame.at(54) != 11 ||
@@ -515,6 +526,11 @@ int main() {
             std::cerr << "SimpleEngine did not render LED bar DMX values while running\n";
             return 1;
         }
+        if (frame.at(99) == 0 || (frame.at(100) == 0 && frame.at(101) == 0 && frame.at(102) == 0) ||
+            frame.at(103) != 0 || frame.at(104) != 0 || frame.at(105) != 0) {
+            std::cerr << "SimpleEngine did not render the RGB PAR using only master and RGB\n";
+            return 1;
+        }
         if (frame.at(50) == 0 || frame.at(52) == 0 || frame.at(56) != 10 || frame.at(57) == 0) {
             std::cerr << "SimpleEngine did not render the enabled moving-head layer\n";
             return 1;
@@ -749,7 +765,7 @@ int main() {
 
     {
         const lightengine::ShowProject loaded = lightengine::load_show_project_from_file("shows/default.json");
-        if (loaded.id != "default" || loaded.patch.size() != 7U || loaded.presets.size() != 9U ||
+        if (loaded.id != "default" || loaded.patch.size() != 10U || loaded.presets.size() != 9U ||
             loaded.presets.at(1).id != "club" || loaded.presets.at(1).effects.size() < 10U ||
             loaded.presets.at(1).motion_scenes.size() < 8U || loaded.presets.at(6).id != "techno") {
             std::cerr << "Show project loader did not load patch and preset scene collections\n";
