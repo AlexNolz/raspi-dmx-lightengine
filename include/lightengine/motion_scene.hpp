@@ -40,6 +40,7 @@ struct MotionTarget final {
     double x{0.5};
     double y{0.5};
     double dimmer_scale{1.0};
+    bool disco_ball{false};
 };
 
 class MotionSceneLibrary final {

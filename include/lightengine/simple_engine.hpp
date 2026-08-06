@@ -51,6 +51,7 @@ private:
     void select_next_effect_locked(const MusicDynamicsSnapshot* dynamics = nullptr);
     [[nodiscard]] std::string active_effect_label_locked() const;
     void render_safe_moving_head_blackout(DmxFrame& frame, bool reset_active) const;
+    void render_disco_ball_calibration(DmxFrame& frame);
     void render_moving_heads(
         DmxFrame& frame,
         const BeatSnapshot& beat,
@@ -83,10 +84,14 @@ private:
     bool gobo_fast_peak_enabled_{true};
     bool manual_color_enabled_{false};
     bool manual_color_use_raw_{false};
+    bool disco_ball_test_mode_{false};
+    std::uint8_t disco_ball_selected_head_{};
+    bool disco_ball_adjust_all_tilt_{false};
     bool rgb_par_zone_linked_{false};
     double master_{1.0};
     double led_master_{1.0};
     double motion_master_{1.0};
+    double rgb_par_master_{1.0};
     double strobe_master_{1.0};
     double strobe_speed_{1.0};
     double gobo_shake_mood_threshold_{0.62};
@@ -106,6 +111,8 @@ private:
     std::vector<std::string> active_gobos_;
     std::int64_t last_effect_change_position_{-1};
     std::array<std::uint16_t, 4> moving_head_starts_{51, 62, 73, 84};
+    std::array<double, 4> disco_ball_pans_{0.333, 0.333, 0.333, 0.333};
+    double disco_ball_tilt_{0.68};
     std::array<std::uint16_t, 3> rgb_par_starts_{100, 110, 120};
     std::uint16_t strobe_start_{1};
     std::uint16_t fog_start_{95};

@@ -12,6 +12,10 @@ let movingHeadColorsBuilt = false;
 let parScenesBuilt = false;
 let rigBuilt = false;
 let pendingSlider = null;
+let artnetFormDirty = false;
+let discoCalibrationDraft = null;
+let discoCalibrationDirty = false;
+let discoCalibrationTimer = null;
 
 const preview = document.querySelector("#preview");
 const os2lStatus = document.querySelector("#os2lStatus");
@@ -31,6 +35,8 @@ const motionMasterValue = document.querySelector("#motionMasterValue");
 const ledEnabled = document.querySelector("#ledEnabled");
 const ledBeatPulse = document.querySelector("#ledBeatPulse");
 const parZoneLinked = document.querySelector("#parZoneLinked");
+const parZoneMaster = document.querySelector("#parZoneMaster");
+const parZoneMasterValue = document.querySelector("#parZoneMasterValue");
 const parZoneMood = document.querySelector("#parZoneMood");
 const parZoneMoodValue = document.querySelector("#parZoneMoodValue");
 const parZoneScene = document.querySelector("#parZoneScene");
@@ -68,6 +74,14 @@ const artnetHost = document.querySelector("#artnetHost");
 const universe = document.querySelector("#universe");
 const startChannel = document.querySelector("#startChannel");
 const segmentsInput = document.querySelector("#segmentsInput");
+const discoTest = document.querySelector("#discoTest");
+const discoTilt = document.querySelector("#discoTilt");
+const discoTiltValue = document.querySelector("#discoTiltValue");
+const discoHead = document.querySelector("#discoHead");
+const discoPan = document.querySelector("#discoPan");
+const discoPanValue = document.querySelector("#discoPanValue");
+const discoCalibrationStatus = document.querySelector("#discoCalibrationStatus");
+const discoCalibrationFile = document.querySelector("#discoCalibrationFile");
 
 async function send(payload) {
   const response = await fetch(controlUrl, {
@@ -123,6 +137,27 @@ function render(state) {
   ledMasterValue.textContent = Math.round((config.led_master ?? 1) * 100);
   motionMaster.value = Math.round((config.motion_master ?? 1) * 100);
   motionMasterValue.textContent = Math.round((config.motion_master ?? 1) * 100);
+  const discoConfig = config.disco_ball || { test_mode: false, tilt: 0.68, pans: [0.333, 0.333, 0.333, 0.333] };
+  const movingHeads = (config.fixtures && config.fixtures.moving_heads) || [];
+  if (discoHead.options.length !== movingHeads.length) {
+    discoHead.replaceChildren(...movingHeads.map((head, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = head.name || `Moving Head ${index + 1}`;
+      return option;
+    }));
+  }
+  if (!discoCalibrationDraft || !discoCalibrationDirty) {
+    discoCalibrationDraft = {
+      test_mode: Boolean(discoConfig.test_mode),
+      selected_head: Number(discoConfig.selected_head ?? 0),
+      tilt: Number(discoConfig.tilt ?? 0.68),
+      pans: [0, 1, 2, 3].map((index) => Number((discoConfig.pans || [])[index] ?? 0.333))
+    };
+    syncDiscoCalibrationControls();
+  }
+  discoTest.classList.toggle("active", Boolean(discoCalibrationDraft.test_mode));
+  discoTest.textContent = discoCalibrationDraft.test_mode ? "Testfahrt beenden" : "Langsame Testfahrt starten";
   const strobeConfig = (config.fixtures && config.fixtures.strobe) || {};
   ledEnabled.checked = Boolean(config.layers && config.layers.led_bars);
   ledBeatPulse.checked = Boolean(config.led_beat_pulse);
@@ -137,6 +172,8 @@ function render(state) {
     }));
   }
   parZoneLinked.checked = Boolean(parZoneConfig.linked);
+  parZoneMaster.value = Math.round((config.rgb_par_master ?? 1) * 100);
+  parZoneMasterValue.textContent = parZoneMaster.value;
   parZoneMood.value = parZoneConfig.mood ?? 35;
   parZoneMoodValue.textContent = parZoneMood.value;
   parZoneScene.value = parZoneConfig.scene || "auto";
@@ -220,10 +257,15 @@ function render(state) {
   runButton.classList.toggle("active", state.running);
   blackoutButton.classList.toggle("active", state.blackout);
 
-  artnetHost.value = config.artnet_host;
-  universe.value = config.artnet_universe;
-  startChannel.value = config.led_start_channel;
-  segmentsInput.value = config.segment_count;
+  // State is refreshed four times per second. Do not overwrite ArtNet values
+  // while the user is editing them, otherwise an IP address cannot be typed
+  // reliably and Apply may send the previous value.
+  if (!artnetFormDirty) {
+    artnetHost.value = config.artnet_host;
+    universe.value = config.artnet_universe;
+    startChannel.value = config.led_start_channel;
+    segmentsInput.value = config.segment_count;
+  }
 
   preview.style.gridTemplateColumns = `repeat(${state.preview.length}, minmax(24px, 1fr))`;
   preview.replaceChildren(...state.preview.map((color) => {
@@ -437,6 +479,11 @@ motionMaster.addEventListener("input", () => {
   queueSlider({ action: "set_output_master", target: "motion_master", value: Number(motionMaster.value) / 100 });
 });
 
+parZoneMaster.addEventListener("input", () => {
+  parZoneMasterValue.textContent = parZoneMaster.value;
+  queueSlider({ action: "set_output_master", target: "rgb_par_master", value: Number(parZoneMaster.value) / 100 });
+});
+
 ledEnabled.addEventListener("change", () => {
   send({ action: "set_layer", layer: "led_bars", enabled: ledEnabled.checked });
 });
@@ -592,14 +639,148 @@ document.querySelectorAll("[data-preset]").forEach((button) => {
   button.addEventListener("click", () => send({ action: "apply_preset", preset: button.dataset.preset }));
 });
 
-document.querySelector("#applyArtnet").addEventListener("click", () => {
-  send({
+function syncDiscoCalibrationControls() {
+  if (!discoCalibrationDraft) return;
+  discoHead.value = String(discoCalibrationDraft.selected_head);
+  const headIndex = Math.max(0, Math.min(3, discoCalibrationDraft.selected_head));
+  discoTilt.value = Math.round(discoCalibrationDraft.tilt * 1000);
+  discoTiltValue.textContent = discoTilt.value;
+  discoPan.value = Math.round(discoCalibrationDraft.pans[headIndex] * 1000);
+  discoPanValue.textContent = discoPan.value;
+}
+
+function discoCalibrationPayload(adjustAllTilt = false) {
+  return {
+    action: "set_disco_ball_calibration",
+    test_mode: Boolean(discoCalibrationDraft.test_mode),
+    selected_head: discoCalibrationDraft.selected_head,
+    adjust_all_tilt: adjustAllTilt,
+    tilt: discoCalibrationDraft.tilt,
+    pan_1: discoCalibrationDraft.pans[0],
+    pan_2: discoCalibrationDraft.pans[1],
+    pan_3: discoCalibrationDraft.pans[2],
+    pan_4: discoCalibrationDraft.pans[3]
+  };
+}
+
+async function applyDiscoCalibration(markSaved = false, adjustAllTilt = false) {
+  try {
+    await send(discoCalibrationPayload(adjustAllTilt));
+    if (markSaved) {
+      discoCalibrationDirty = false;
+      discoCalibrationStatus.textContent = "Positionen übernommen";
+    } else {
+      discoCalibrationStatus.textContent = discoCalibrationDraft.test_mode
+        ? "Live-Test aktiv · Änderungen werden langsam angefahren"
+        : "Test beendet";
+    }
+  } catch (error) {
+    discoCalibrationStatus.textContent = "Übernahme fehlgeschlagen";
+    console.error("Disco ball calibration could not be applied", error);
+  }
+}
+
+function queueDiscoCalibration(adjustAllTilt) {
+  clearTimeout(discoCalibrationTimer);
+  if (discoCalibrationDraft.test_mode) {
+    discoCalibrationTimer = setTimeout(() => applyDiscoCalibration(false, adjustAllTilt), 90);
+  }
+}
+
+discoTest.addEventListener("click", () => {
+  discoCalibrationDraft.test_mode = !discoCalibrationDraft.test_mode;
+  discoCalibrationDirty = true;
+  syncDiscoCalibrationControls();
+  applyDiscoCalibration(false, true);
+});
+
+discoTilt.addEventListener("input", () => {
+  discoCalibrationDraft.tilt = Number(discoTilt.value) / 1000;
+  discoTiltValue.textContent = discoTilt.value;
+  discoCalibrationDirty = true;
+  queueDiscoCalibration(true);
+});
+
+discoHead.addEventListener("change", () => {
+  discoCalibrationDraft.selected_head = Math.max(0, Math.min(3, Number(discoHead.value || 0)));
+  discoCalibrationDirty = true;
+  syncDiscoCalibrationControls();
+  if (discoCalibrationDraft.test_mode) applyDiscoCalibration(false, false);
+});
+
+discoPan.addEventListener("input", () => {
+  const headIndex = Math.max(0, Math.min(3, Number(discoHead.value || 0)));
+  discoCalibrationDraft.pans[headIndex] = Number(discoPan.value) / 1000;
+  discoPanValue.textContent = discoPan.value;
+  discoCalibrationDirty = true;
+  queueDiscoCalibration(false);
+});
+
+document.querySelector("#saveDiscoCalibration").addEventListener("click", () => applyDiscoCalibration(true));
+
+document.querySelector("#exportDiscoCalibration").addEventListener("click", () => {
+  const calibration = {
+    schema: "lightengine.disco_ball_calibration.v1",
+    tilt: discoCalibrationDraft.tilt,
+    pans: discoCalibrationDraft.pans
+  };
+  const blob = new Blob([`${JSON.stringify(calibration, null, 2)}\n`], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "disco-ball-calibration.json";
+  link.click();
+  URL.revokeObjectURL(link.href);
+  discoCalibrationStatus.textContent = "Kalibrierung als JSON exportiert";
+});
+
+document.querySelector("#importDiscoCalibration").addEventListener("click", () => discoCalibrationFile.click());
+
+discoCalibrationFile.addEventListener("change", async () => {
+  const file = discoCalibrationFile.files && discoCalibrationFile.files[0];
+  if (!file) return;
+  try {
+    const imported = JSON.parse(await file.text());
+    if (imported.schema !== "lightengine.disco_ball_calibration.v1" ||
+        !Array.isArray(imported.pans) || imported.pans.length !== 4 ||
+        !Number.isFinite(Number(imported.tilt)) || imported.pans.some((value) => !Number.isFinite(Number(value)))) {
+      throw new Error("Ungültiges Kalibrierungsformat");
+    }
+    discoCalibrationDraft.tilt = Math.max(0, Math.min(1, Number(imported.tilt)));
+    discoCalibrationDraft.pans = imported.pans.map((value) => Math.max(0, Math.min(1, Number(value))));
+    discoCalibrationDirty = true;
+    syncDiscoCalibrationControls();
+    await applyDiscoCalibration(true, true);
+    discoCalibrationStatus.textContent = "JSON geladen und Positionen übernommen";
+  } catch (error) {
+    discoCalibrationStatus.textContent = `JSON konnte nicht geladen werden: ${error.message}`;
+  } finally {
+    discoCalibrationFile.value = "";
+  }
+});
+
+const artnetInputs = [artnetHost, universe, startChannel, segmentsInput];
+artnetInputs.forEach((input) => {
+  input.addEventListener("input", () => {
+    artnetFormDirty = true;
+  });
+});
+
+document.querySelector("#applyArtnet").addEventListener("click", async () => {
+  const payload = {
     action: "set_artnet",
     artnet_host: artnetHost.value.trim(),
     artnet_universe: Number(universe.value),
     led_start_channel: Number(startChannel.value),
     segment_count: Number(segmentsInput.value)
-  });
+  };
+
+  try {
+    await send(payload);
+    artnetFormDirty = false;
+    render(lastState);
+  } catch (error) {
+    console.error("ArtNet settings could not be applied", error);
+  }
 });
 
 loadState();

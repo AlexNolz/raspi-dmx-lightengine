@@ -53,6 +53,40 @@ void wheel_slots_json(std::ostringstream& out, const std::vector<FixtureWheelSlo
     out << '}';
 }
 
+std::uint64_t mix_color_seed(std::uint64_t value) {
+    value ^= value >> 30U;
+    value *= 0xbf58476d1ce4e5b9ULL;
+    value ^= value >> 27U;
+    value *= 0x94d049bb133111ebULL;
+    return value ^ (value >> 31U);
+}
+
+std::size_t disco_ball_all_color_slot(
+    const std::size_t fixture_index,
+    const std::size_t color_count,
+    const std::int64_t epoch,
+    const std::uint64_t show_seed) {
+    if (color_count < 2U) {
+        return 0U;
+    }
+    const std::uint64_t mixed = mix_color_seed(
+        show_seed ^ (static_cast<std::uint64_t>(std::max<std::int64_t>(0, epoch)) * 0x9e3779b97f4a7c15ULL));
+    const std::size_t offset = static_cast<std::size_t>(mixed % color_count);
+    // Cycle through individual colors, two equal-color pairs, another shuffled
+    // individual look, and an occasional unified color on all four heads.
+    const std::int64_t grouping = epoch % 4;
+    if (grouping == 3) {
+        return offset;
+    }
+    if (grouping == 1) {
+        const bool crossed_pairs = (mixed & 1U) != 0U;
+        const std::size_t group = crossed_pairs ? fixture_index % 2U : fixture_index / 2U;
+        return (offset + group) % color_count;
+    }
+    const std::size_t stride = color_count > 2U && (mixed & 1U) != 0U ? color_count - 1U : 1U;
+    return (offset + fixture_index * stride) % color_count;
+}
+
 }  // namespace
 
 SimpleEngine::SimpleEngine(SimpleEngineConfig config)
@@ -174,8 +208,10 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
             } else if constexpr (std::is_same_v<Command, SetOutputMasterCommand>) {
                 if (typed_command.target == OutputMasterTarget::led) {
                     led_master_ = typed_command.value;
-                } else {
+                } else if (typed_command.target == OutputMasterTarget::motion) {
                     motion_master_ = typed_command.value;
+                } else {
+                    rgb_par_master_ = typed_command.value;
                 }
             } else if constexpr (std::is_same_v<Command, SetLayerCommand>) {
                 if (typed_command.layer == LayerId::led_bars) {
@@ -300,6 +336,14 @@ void SimpleEngine::apply_control_command(const ControlCommand& command) {
                 } else if (typed_command.fixture == PatchFixtureId::fog) {
                     fog_start_ = typed_command.start;
                 }
+            } else if constexpr (std::is_same_v<Command, SetDiscoBallCalibrationCommand>) {
+                disco_ball_test_mode_ = typed_command.test_mode;
+                disco_ball_selected_head_ = std::min<std::uint8_t>(typed_command.selected_head, 3U);
+                disco_ball_adjust_all_tilt_ = typed_command.adjust_all_tilt;
+                disco_ball_tilt_ = clamp01(typed_command.tilt);
+                for (std::size_t index = 0; index < disco_ball_pans_.size(); ++index) {
+                    disco_ball_pans_.at(index) = clamp01(typed_command.pans.at(index));
+                }
             } else if constexpr (std::is_same_v<Command, TriggerCommand>) {
                 const auto now = std::chrono::steady_clock::now();
                 const double default_seconds = typed_command.trigger == LiveTriggerId::whiteout ? 0.8
@@ -349,6 +393,10 @@ DmxFrame SimpleEngine::render_frame(const std::chrono::steady_clock::time_point 
     const ShowLayerContext layer_context{
         beat, dynamics, static_cast<double>(mood_) / 100.0, preset_, show_seed_, color_selection_nonce_};
     const ColorLayerSelection color_selection = color_layer_.resolve(rgb_scenes_, layer_context, active_palettes_);
+    if (disco_ball_test_mode_ && !blackout_ && !blackout_held_) {
+        render_disco_ball_calibration(frame);
+        return frame;
+    }
     if (!running_ || blackout_ || blackout_held_) {
         render_safe_moving_head_blackout(frame, !running_ && now < reset_until_);
         return frame;
@@ -515,6 +563,7 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(,"master":)" << master_
         << R"(,"led_master":)" << led_master_
         << R"(,"motion_master":)" << motion_master_
+        << R"(,"rgb_par_master":)" << rgb_par_master_
         << R"(,"led_beat_pulse":)" << json_bool(std::find(active_effects_.begin(), active_effects_.end(), "pulse") != active_effects_.end())
         << R"(,"motion_beat_pulse":)" << json_bool(motion_beat_pulse_enabled_)
         << R"(,"rgb_par_zone":{"linked":)" << json_bool(rgb_par_zone_linked_)
@@ -524,6 +573,11 @@ std::string SimpleEngine::state_json(const std::chrono::steady_clock::time_point
         << R"(,"mood":)" << static_cast<int>(mood_)
         << R"(,"preset":")" << preset_
         << R"(","motion_mode":")" << motion_mode_ << '"'
+        << R"(,"disco_ball":{"test_mode":)" << json_bool(disco_ball_test_mode_)
+        << R"(,"selected_head":)" << static_cast<int>(disco_ball_selected_head_)
+        << R"(,"tilt":)" << disco_ball_tilt_
+        << R"(,"pans":[)" << disco_ball_pans_.at(0) << ',' << disco_ball_pans_.at(1) << ','
+        << disco_ball_pans_.at(2) << ',' << disco_ball_pans_.at(3) << "]}"
         << R"(,"gobo":{"enabled":)" << json_bool(gobo_enabled_)
         << R"(,"mode":")" << gobo_mode_
         << R"(","selected_gobo":")" << selected_gobo_
@@ -625,7 +679,7 @@ ArtNetEndpoint SimpleEngine::artnet_endpoint() const {
 
 bool SimpleEngine::output_active(const std::chrono::steady_clock::time_point now) const {
     std::lock_guard lock{mutex_};
-    return running_ || now < reset_until_;
+    return running_ || disco_ball_test_mode_ || now < reset_until_;
 }
 
 void SimpleEngine::render_safe_moving_head_blackout(DmxFrame& frame, const bool reset_active) const {
@@ -641,6 +695,34 @@ void SimpleEngine::render_safe_moving_head_blackout(DmxFrame& frame, const bool 
         park.dimmer = 0;
         park.reset = reset_active ? moving_head_profile_.reset_value : 0;
         Zkymzl11MovingHead{DmxAddress{start_address}}.render_to(frame, park);
+    }
+}
+
+void SimpleEngine::render_disco_ball_calibration(DmxFrame& frame) {
+    for (std::size_t index = 0; index < moving_head_starts_.size(); ++index) {
+        const std::uint16_t start_address = moving_head_starts_.at(index);
+        if (start_address > dmx_channel_count - 10U) {
+            continue;
+        }
+        Zkymzl11Look look;
+        const bool selected = index == disco_ball_selected_head_;
+        if (selected || disco_ball_adjust_all_tilt_) {
+            look.pan = to_dmx(disco_ball_pans_.at(index));
+            look.tilt = to_dmx(disco_ball_tilt_);
+        } else {
+            // During left/right calibration only the head selected in the UI
+            // receives a new position. The other motors retain their last look.
+            look = last_moving_head_looks_.at(index);
+        }
+        const std::string color = index % 2U == 0U ? "white" : "cyan";
+        look.color_wheel = moving_head_profile_.color_value(color).value_or(moving_head_profile_.color_test_default);
+        look.gobo = moving_head_profile_.gobo_value("open").value_or(18);
+        look.shutter = 10;
+        look.dimmer = to_dmx((selected || disco_ball_adjust_all_tilt_ ? 0.62 : 0.10) * master_ * motion_master_);
+        // High values select deliberately slow, smooth motor movement on this fixture.
+        look.movement_speed = 235;
+        last_moving_head_looks_.at(index) = look;
+        Zkymzl11MovingHead{DmxAddress{start_address}}.render_to(frame, look);
     }
 }
 
@@ -665,6 +747,18 @@ void SimpleEngine::render_moving_heads(
         definition = motion_scenes_.find("center_pulse");
     }
 
+    std::vector<std::size_t> disco_color_slots;
+    std::vector<std::uint8_t> disco_color_values;
+    if (scene == "disco_ball_all") {
+        for (std::size_t slot = 0; slot < palette.color_names.size(); ++slot) {
+            const auto value = moving_head_profile_.color_value(palette.color_names.at(slot));
+            if (value && std::find(disco_color_values.begin(), disco_color_values.end(), *value) == disco_color_values.end()) {
+                disco_color_slots.push_back(slot);
+                disco_color_values.push_back(*value);
+            }
+        }
+    }
+
     for (std::size_t index = 0; index < moving_head_starts_.size(); ++index) {
         const std::uint16_t start_address = moving_head_starts_.at(index);
         if (start_address > dmx_channel_count - 10U) {
@@ -676,27 +770,41 @@ void SimpleEngine::render_moving_heads(
             ? MotionTarget{}
             : motion_scenes_.evaluate(
                   *definition, index, moving_head_starts_.size(), beat, mood, show_seed_, motion_beat_pulse_enabled_);
-        const double calibrated_x = target.x < 0.5
-            ? 0.5 + (target.x - 0.5) * moving_head_profile_.left_pan_scale
-            : target.x;
-        const double calibrated_y = std::clamp(target.y + moving_head_profile_.target_y_offset, 0.0, 1.0);
-        const double pan_width = moving_head_profile_.pan_width - calibrated_y * 0.03;
-        const double pan = std::clamp(
-            moving_head_profile_.pan_center +
-                (calibrated_x - 0.5) * pan_width * moving_head_profile_.pan_direction,
-            std::min(moving_head_profile_.pan_min, moving_head_profile_.pan_max),
-            std::max(moving_head_profile_.pan_min, moving_head_profile_.pan_max));
-        const double tilt = std::clamp(
-            moving_head_profile_.tilt_min +
-                (moving_head_profile_.tilt_max - moving_head_profile_.tilt_min) * calibrated_y,
-            std::min(moving_head_profile_.tilt_min, moving_head_profile_.tilt_max),
-            std::max(moving_head_profile_.tilt_min, moving_head_profile_.tilt_max));
+        double pan = disco_ball_pans_.at(index);
+        double tilt = disco_ball_tilt_;
+        if (!target.disco_ball) {
+            const double calibrated_x = target.x < 0.5
+                ? 0.5 + (target.x - 0.5) * moving_head_profile_.left_pan_scale
+                : target.x;
+            const double calibrated_y = std::clamp(target.y + moving_head_profile_.target_y_offset, 0.0, 1.0);
+            const double pan_width = moving_head_profile_.pan_width - calibrated_y * 0.03;
+            pan = std::clamp(
+                moving_head_profile_.pan_center +
+                    (calibrated_x - 0.5) * pan_width * moving_head_profile_.pan_direction,
+                std::min(moving_head_profile_.pan_min, moving_head_profile_.pan_max),
+                std::max(moving_head_profile_.pan_min, moving_head_profile_.pan_max));
+            tilt = std::clamp(
+                moving_head_profile_.tilt_min +
+                    (moving_head_profile_.tilt_max - moving_head_profile_.tilt_min) * calibrated_y,
+                std::min(moving_head_profile_.tilt_min, moving_head_profile_.tilt_max),
+                std::max(moving_head_profile_.tilt_min, moving_head_profile_.tilt_max));
+        }
         look.pan = to_dmx(pan);
         look.tilt = to_dmx(tilt);
         const double level = (0.41 + mood * 0.53 + beat_hit * (0.06 + mood * 0.25)) * target.dimmer_scale;
 
         if (!palette.color_names.empty()) {
-            const std::string& color_name = palette.color_names.at((index / 2U) % palette.color_names.size());
+            const bool disco_scene = definition != nullptr && definition->type == "disco_ball";
+            std::size_t color_slot = index / 2U;
+            if (scene == "disco_ball_all" && !disco_color_slots.empty()) {
+                const auto color_epoch = static_cast<std::int64_t>(std::floor(beat.beat / 16.0));
+                const std::size_t randomized = disco_ball_all_color_slot(
+                    index, disco_color_slots.size(), color_epoch, show_seed_);
+                color_slot = disco_color_slots.at(randomized);
+            } else if (disco_scene) {
+                color_slot = target.disco_ball ? 0U : 1U + index / 2U;
+            }
+            const std::string& color_name = palette.color_names.at(color_slot % palette.color_names.size());
             look.color_wheel = moving_head_profile_.color_value(color_name).value_or(
                 moving_head_profile_.colors.at((index / 2U) % moving_head_profile_.colors.size()).value);
         } else {
@@ -770,7 +878,7 @@ void SimpleEngine::render_rgb_pars(
         bar1_.wash_color(bar1_.size() / 2U),
         bar2_.wash_color(bar2_.size() - 1U),
     };
-    std::uint8_t par_master = 255;
+    std::uint8_t par_master = to_dmx(rgb_par_master_);
     if (!rgb_par_zone_linked_) {
         const double mood = static_cast<double>(rgb_par_zone_mood_) / 100.0;
         const RgbParSceneDefinition& scene = rgb_par_zone_scene_ == "auto"
@@ -778,7 +886,7 @@ void SimpleEngine::render_rgb_pars(
             : *rgb_par_scenes_.find(rgb_par_zone_scene_);
         const RgbParSceneOutput output = rgb_par_scenes_.evaluate(scene, beat, mood, palette);
         colors = output.colors;
-        par_master = to_dmx(master_ * output.master_scale);
+        par_master = to_dmx(master_ * rgb_par_master_ * output.master_scale);
     }
     for (std::size_t index = 0; index < rgb_par_starts_.size(); ++index) {
         const Rgb color = colors.at(index);

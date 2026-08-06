@@ -144,6 +144,19 @@ separate Layer.
 }
 ```
 
+### Disco-Kugel
+
+Die Weboberfläche speichert für die Disco-Kugel eine gemeinsame Tilt-Höhe und eine
+eigene Pan-Position pro Moving Head. Mit „Langsame Testfahrt“ wird diese Position bei
+reduzierter Motorgeschwindigkeit live angefahren. Die Kalibrierung kann im Format
+`lightengine.disco_ball_calibration.v1` als JSON exportiert und wieder geladen werden.
+
+Szenen vom Typ `disco_ball` bestimmen über `grouping`, welche Heads auf die Kugel
+zeigen: `all`, `fixture`, `pair` oder `duo`. Die übrigen Heads bleiben in Bewegung und
+fahren einen Orbit über die Tanzfläche. Die Farbengine weist Kugel und Fläche
+unterschiedliche Slots derselben aktiven Palette zu. `allow_shake` erlaubt bei den
+intensiveren Kugelszenen zusätzlich den musikalischen Gobo-/Shake-Layer.
+
 ## Gobo Wheels
 
 Gobos werden in Show-JSON über Namen angesprochen, nicht über DMX-Zahlen:

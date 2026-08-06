@@ -386,6 +386,22 @@ output {
   gap: 6px;
 }
 
+.disco-ball-control {
+  grid-column: span 2;
+  display: grid;
+  gap: 12px;
+}
+
+.disco-ball-control label {
+  grid-template-columns: minmax(150px, 0.7fr) minmax(180px, 1.4fr) 64px;
+}
+
+.disco-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  gap: 8px;
+}
+
 input[type="text"],
 input[type="number"],
 select {
@@ -418,6 +434,12 @@ select {
   }
 
   .motion-scenes {
+    grid-template-columns: 1fr;
+  }
+
+  .disco-ball-control,
+  .disco-actions {
+    grid-column: auto;
     grid-template-columns: 1fr;
   }
 

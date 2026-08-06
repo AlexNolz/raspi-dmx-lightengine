@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -10,6 +11,7 @@ namespace lightengine {
 enum class OutputMasterTarget {
     led,
     motion,
+    rgb_par,
 };
 
 enum class BeatPulseTarget {
@@ -170,6 +172,14 @@ struct SetFixtureAddressCommand final {
     std::uint16_t start{1};
 };
 
+struct SetDiscoBallCalibrationCommand final {
+    bool test_mode{false};
+    std::uint8_t selected_head{};
+    bool adjust_all_tilt{false};
+    double tilt{0.68};
+    std::array<double, 4> pans{0.333, 0.333, 0.333, 0.333};
+};
+
 struct UnknownControlCommand final {
     std::string action;
     std::string payload;
@@ -200,6 +210,7 @@ using ControlCommand = std::variant<
     SetHoldTriggerCommand,
     SetArtNetCommand,
     SetFixtureAddressCommand,
+    SetDiscoBallCalibrationCommand,
     UnknownControlCommand>;
 
 [[nodiscard]] std::optional<ControlCommand> parse_control_command(const std::string& payload);

@@ -14,6 +14,7 @@
 #include <iostream>
 #include <chrono>
 #include <optional>
+#include <set>
 #include <string>
 #include <variant>
 
@@ -207,6 +208,20 @@ int main() {
 
     {
         const std::optional<lightengine::ControlCommand> command =
+            lightengine::parse_control_command(R"({"action":"set_output_master","target":"rgb_par_master","value":0.35})");
+        if (!command || !std::holds_alternative<lightengine::SetOutputMasterCommand>(*command)) {
+            std::cerr << "RGB PAR set_output_master command was not parsed\n";
+            return 1;
+        }
+        const auto output_master = std::get<lightengine::SetOutputMasterCommand>(*command);
+        if (output_master.target != lightengine::OutputMasterTarget::rgb_par || output_master.value != 0.35) {
+            std::cerr << "RGB PAR set_output_master command contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
+        const std::optional<lightengine::ControlCommand> command =
             lightengine::parse_control_command(R"({"action":"set_layer","layer":"fog","enabled":true})");
         if (!command || !std::holds_alternative<lightengine::SetLayerCommand>(*command)) {
             std::cerr << "set_layer command was not parsed\n";
@@ -257,6 +272,22 @@ int main() {
         const auto artnet = std::get<lightengine::SetArtNetCommand>(*command);
         if (artnet.host != "192.168.137.255" || artnet.universe != 0 || artnet.led_start_channel != 3 || artnet.segment_count != 16) {
             std::cerr << "set_artnet command contains wrong values\n";
+            return 1;
+        }
+    }
+
+    {
+        const std::optional<lightengine::ControlCommand> command = lightengine::parse_control_command(
+            R"({"action":"set_disco_ball_calibration","test_mode":true,"selected_head":2,"adjust_all_tilt":true,"tilt":0.7,"pan_1":0.2,"pan_2":0.3,"pan_3":0.4,"pan_4":0.5})");
+        if (!command || !std::holds_alternative<lightengine::SetDiscoBallCalibrationCommand>(*command)) {
+            std::cerr << "set_disco_ball_calibration command was not parsed\n";
+            return 1;
+        }
+        const auto calibration = std::get<lightengine::SetDiscoBallCalibrationCommand>(*command);
+        if (!calibration.test_mode || calibration.selected_head != 2U || !calibration.adjust_all_tilt ||
+            calibration.tilt != 0.7 || calibration.pans.at(0) != 0.2 ||
+            calibration.pans.at(3) != 0.5) {
+            std::cerr << "set_disco_ball_calibration command contains wrong values\n";
             return 1;
         }
     }
@@ -539,7 +570,8 @@ int main() {
         lightengine::MotionSceneLibrary motions;
         motions.load_from_file("shows/moving_head_scenes.json");
         const lightengine::BeatSnapshot beat{16.0, 0.0, 16, 120.0, 1.0, true};
-        if (motions.scenes().size() < 20U || motions.find("pair_random") == nullptr ||
+        if (motions.scenes().size() < 24U || motions.find("pair_random") == nullptr ||
+            motions.find("disco_ball_all") == nullptr || motions.find("disco_ball_duo") == nullptr ||
             !motions.find("gobo_chase")->allow_shake || motions.find("gobo_chase")->energy_min < 0.5) {
             std::cerr << "Moving-head JSON scene library is incomplete\n";
             return 1;
@@ -551,6 +583,52 @@ int main() {
                 std::cerr << "Moving-head scene generated an invalid target: " << scene.id << '\n';
                 return 1;
             }
+        }
+        const lightengine::MotionTarget disco_target = motions.evaluate(
+            *motions.find("disco_ball_pairs"), 0U, 4U, beat, 0.7, 42U);
+        const lightengine::MotionTarget floor_target = motions.evaluate(
+            *motions.find("disco_ball_pairs"), 2U, 4U, beat, 0.7, 42U);
+        if (disco_target.disco_ball == floor_target.disco_ball) {
+            std::cerr << "Disco-ball pair scene did not split ball and floor targets\n";
+            return 1;
+        }
+    }
+
+    {
+        lightengine::SimpleEngine disco_engine{lightengine::SimpleEngineConfig{}};
+        const auto now = std::chrono::steady_clock::now();
+        disco_engine.apply_control_command(lightengine::SetRunningCommand{true});
+        disco_engine.apply_control_command(lightengine::ApplyPresetCommand{"club"});
+        disco_engine.apply_control_command(lightengine::SetMotionModeCommand{"disco_ball_all"});
+        disco_engine.apply_os2l_event(lightengine::Os2lBeatEvent{0, 120.0, 0.6, false, false}, now);
+        const lightengine::DmxFrame individual = disco_engine.render_frame(now);
+        const std::array<std::uint8_t, 4> individual_colors{
+            individual.at(54), individual.at(65), individual.at(76), individual.at(87)};
+        if (std::set<std::uint8_t>{individual_colors.begin(), individual_colors.end()}.size() < 2U) {
+            std::cerr << "Disco-ball all scene assigned the same color to every moving head\n";
+            return 1;
+        }
+
+        disco_engine.apply_os2l_event(lightengine::Os2lBeatEvent{16, 120.0, 0.6, false, false}, now);
+        const lightengine::DmxFrame paired = disco_engine.render_frame(now);
+        const std::array<std::uint8_t, 4> paired_colors{
+            paired.at(54), paired.at(65), paired.at(76), paired.at(87)};
+        const std::set<std::uint8_t> paired_unique{paired_colors.begin(), paired_colors.end()};
+        const bool two_pairs = paired_unique.size() == 2U &&
+            std::all_of(paired_unique.begin(), paired_unique.end(), [&](const std::uint8_t color) {
+                return std::count(paired_colors.begin(), paired_colors.end(), color) == 2;
+            });
+        if (!two_pairs) {
+            std::cerr << "Disco-ball all scene did not occasionally form two equal-color pairs\n";
+            return 1;
+        }
+
+        disco_engine.apply_os2l_event(lightengine::Os2lBeatEvent{48, 120.0, 0.6, false, false}, now);
+        const lightengine::DmxFrame unified = disco_engine.render_frame(now);
+        if (unified.at(54) != unified.at(65) || unified.at(54) != unified.at(76) ||
+            unified.at(54) != unified.at(87)) {
+            std::cerr << "Disco-ball all scene did not occasionally unify all moving-head colors\n";
+            return 1;
         }
     }
 
@@ -568,6 +646,16 @@ int main() {
             std::cerr << "Independent RGB PAR zone did not stay active with its own scene and mood\n";
             return 1;
         }
+        zone_engine.apply_control_command(lightengine::SetOutputMasterCommand{
+            lightengine::OutputMasterTarget::rgb_par, 0.0});
+        const lightengine::DmxFrame dimmed = zone_engine.render_frame(now);
+        if (dimmed.at(99) != 0 || dimmed.at(109) != 0 || dimmed.at(119) != 0 ||
+            zone_engine.state_json(now).find(R"("rgb_par_master":0)") == std::string::npos) {
+            std::cerr << "RGB PAR master did not dim all three PAR fixtures\n";
+            return 1;
+        }
+        zone_engine.apply_control_command(lightengine::SetOutputMasterCommand{
+            lightengine::OutputMasterTarget::rgb_par, 1.0});
         zone_engine.apply_control_command(lightengine::SetRgbParZoneCommand{true, 25, "auto"});
         const lightengine::DmxFrame linked = zone_engine.render_frame(now);
         if (linked.at(99) != 0 || linked.at(100) != 0 || linked.at(101) != 0 || linked.at(102) != 0) {
@@ -663,6 +751,31 @@ int main() {
             std::cerr << "SimpleEngine did not apply ArtNet target changes\n";
             return 1;
         }
+        engine.apply_control_command(lightengine::SetDiscoBallCalibrationCommand{
+            true, 0, true, 0.7, {0.2, 0.3, 0.4, 0.5}});
+        const lightengine::DmxFrame calibration_frame = engine.render_frame(now);
+        if (!engine.output_active(now) || calibration_frame.at(50) != 51 || calibration_frame.at(52) != 179 ||
+            calibration_frame.at(58) != 235 ||
+            engine.state_json(now).find(R"("disco_ball":{"test_mode":true,"selected_head":0,"tilt":0.7,"pans":[0.2,0.3,0.4,0.5])") == std::string::npos) {
+            std::cerr << "SimpleEngine did not apply the disco-ball calibration\n";
+            return 1;
+        }
+        engine.apply_control_command(lightengine::SetDiscoBallCalibrationCommand{
+            true, 0, false, 0.7, {0.25, 0.3, 0.8, 0.5}});
+        const lightengine::DmxFrame head_one_frame = engine.render_frame(now);
+        if (head_one_frame.at(50) != 64 || head_one_frame.at(72) != calibration_frame.at(72)) {
+            std::cerr << "Disco-ball calibration moved MH3 while MH1 was selected\n";
+            return 1;
+        }
+        engine.apply_control_command(lightengine::SetDiscoBallCalibrationCommand{
+            true, 2, false, 0.7, {0.25, 0.3, 0.8, 0.5}});
+        const lightengine::DmxFrame head_three_frame = engine.render_frame(now);
+        if (head_three_frame.at(50) != head_one_frame.at(50) || head_three_frame.at(72) != 204) {
+            std::cerr << "Disco-ball calibration did not isolate MH3 from MH1\n";
+            return 1;
+        }
+        engine.apply_control_command(lightengine::SetDiscoBallCalibrationCommand{
+            false, 2, false, 0.7, {0.25, 0.3, 0.8, 0.5}});
         const std::uint8_t last_pan = engine.render_frame(now).at(50);
         const std::uint8_t last_tilt = engine.render_frame(now).at(52);
         engine.apply_control_command(lightengine::SetRunningCommand{false});

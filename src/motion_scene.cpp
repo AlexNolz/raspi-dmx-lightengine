@@ -105,6 +105,7 @@ std::vector<MotionPoint> points_field(const std::string& object) {
 std::uint64_t mix_seed(std::uint64_t value) {
     value ^= value >> 30U;
     value *= 0xbf58476d1ce4e5b9ULL;
+
     value ^= value >> 27U;
     value *= 0x94d049bb133111ebULL;
     return value ^ (value >> 31U);
@@ -184,6 +185,30 @@ MotionTarget MotionSceneLibrary::evaluate(
     if (scene.type == "fixed") {
         const MotionPoint point = point_at(scene, 0);
         target = {point.x, point.y, lerp(scene.dimmer_min, scene.dimmer_max, hit)};
+    } else if (scene.type == "slow_drift") {
+        const MotionPoint point = point_at(scene, 0);
+        const double phase = beat.beat * speed + static_cast<double>(fixture_index) * 1.5707963268;
+        target.x = point.x + std::sin(phase) * scene.x_amount;
+        target.y = point.y + std::cos(phase * 0.73) * scene.y_amount;
+        target.dimmer_scale = lerp(scene.dimmer_min, scene.dimmer_max, hit);
+    } else if (scene.type == "disco_ball") {
+        const std::size_t pair_count = std::max<std::size_t>(1U, (fixture_count + 1U) / 2U);
+        if (scene.grouping == "all") {
+            target.disco_ball = true;
+        } else if (scene.grouping == "pair") {
+            target.disco_ball = pair == step % pair_count;
+        } else if (scene.grouping == "duo") {
+            target.disco_ball = fixture_index == step % std::max<std::size_t>(1U, fixture_count) ||
+                fixture_index == (step + 1U) % std::max<std::size_t>(1U, fixture_count);
+        } else {
+            target.disco_ball = fixture_index == step % std::max<std::size_t>(1U, fixture_count);
+        }
+        const double orbit_phase = beat.beat * speed + static_cast<double>(fixture_index) * 1.5707963268;
+        target.x = 0.5 + std::sin(orbit_phase) * scene.x_amount;
+        target.y = 0.62 + std::cos(orbit_phase * 0.71) * scene.y_amount;
+        target.dimmer_scale = target.disco_ball
+            ? lerp(std::max(0.58, scene.dimmer_min), scene.dimmer_max, hit)
+            : lerp(scene.dimmer_min, std::min(0.86, scene.dimmer_max), hit);
     } else if (scene.type == "point_chase") {
         const MotionPoint point = point_at(scene, step + fixture_index % 2U);
         target = {point.x, point.y, lerp(scene.dimmer_min, scene.dimmer_max, hit)};
@@ -235,6 +260,16 @@ MotionTarget MotionSceneLibrary::evaluate(
             target.y = point.y;
         }
         target.dimmer_scale = beat.phase < lerp(0.18, 0.38, mood) ? scene.dimmer_max : scene.dimmer_min;
+    }
+
+    // Keep every automatic look alive between its main beats/steps. This small
+    // secondary weave also gives pair, chase and random scenes visible travel
+    // instead of leaving the motors parked until the next discrete change.
+    if (scene.type != "fixed" && scene.type != "slow_drift" && !target.disco_ball) {
+        const double weave = 0.018 + mood * 0.032;
+        const double weave_phase = beat.beat * (0.17 + mood * 0.16) + static_cast<double>(fixture_index) * 1.37;
+        target.x += std::sin(weave_phase) * weave;
+        target.y += std::cos(weave_phase * 0.79) * weave;
     }
 
     target.x = clamp01(target.x);

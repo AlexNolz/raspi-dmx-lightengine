@@ -228,6 +228,9 @@ std::optional<OutputMasterTarget> parse_output_master_target(const std::string& 
     if (value == "motion_master") {
         return OutputMasterTarget::motion;
     }
+    if (value == "rgb_par_master") {
+        return OutputMasterTarget::rgb_par;
+    }
     return std::nullopt;
 }
 
@@ -459,6 +462,20 @@ std::optional<ControlCommand> parse_control_command(const std::string& payload) 
             field_u16_clamped(*fields, "start", 1, 1, 512),
         };
     }
+    if (action == "set_disco_ball_calibration") {
+        return SetDiscoBallCalibrationCommand{
+            field_bool(*fields, "test_mode").value_or(false),
+            field_u8_clamped(*fields, "selected_head", 0, 0, 3),
+            field_bool(*fields, "adjust_all_tilt").value_or(false),
+            clamp_double(field_double(*fields, "tilt").value_or(0.68), 0.0, 1.0),
+            {
+                clamp_double(field_double(*fields, "pan_1").value_or(0.333), 0.0, 1.0),
+                clamp_double(field_double(*fields, "pan_2").value_or(0.333), 0.0, 1.0),
+                clamp_double(field_double(*fields, "pan_3").value_or(0.333), 0.0, 1.0),
+                clamp_double(field_double(*fields, "pan_4").value_or(0.333), 0.0, 1.0),
+            },
+        };
+    }
 
     return UnknownControlCommand{action, payload};
 }
@@ -535,6 +552,9 @@ const char* control_command_type_name(const ControlCommand& command) noexcept {
     }
     if (std::holds_alternative<SetFixtureAddressCommand>(command)) {
         return "set_fixture_address";
+    }
+    if (std::holds_alternative<SetDiscoBallCalibrationCommand>(command)) {
+        return "set_disco_ball_calibration";
     }
     return "unknown";
 }
