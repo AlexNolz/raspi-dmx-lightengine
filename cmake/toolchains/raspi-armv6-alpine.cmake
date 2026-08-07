@@ -29,3 +29,7 @@ add_compile_options(
     -mfpu=vfp
     -mfloat-abi=hard
 )
+
+# Produce one self-contained deploy binary. The target Pi does not need a
+# matching musl/libstdc++ runtime package for the light engine.
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-static")

@@ -3,16 +3,16 @@
   "id": "default",
   "name": "Default Light Show",
   "artnet": {
-    "host": "192.168.137.255",
+    "host": "127.0.0.1",
     "port": 6454,
     "universe": 0
   },
   "patch": [
     { "id": "bar_1", "name": "LED Bar 1", "fixture": "rgb_bar_8seg", "universe": 0, "address": 3, "enabled": true },
     { "id": "bar_2", "name": "LED Bar 2", "fixture": "rgb_bar_8seg", "universe": 0, "address": 27, "enabled": true },
-    { "id": "mh_1", "name": "MH 1", "fixture": "zkymzl_11ch", "universe": 0, "address": 51, "enabled": true },
+    { "id": "mh_1", "name": "MH 1", "fixture": "zkymzl_11ch", "universe": 0, "address": 73, "enabled": true },
     { "id": "mh_2", "name": "MH 2", "fixture": "zkymzl_11ch", "universe": 0, "address": 62, "enabled": true },
-    { "id": "mh_3", "name": "MH 3", "fixture": "zkymzl_11ch", "universe": 0, "address": 73, "enabled": true },
+    { "id": "mh_3", "name": "MH 3", "fixture": "zkymzl_11ch", "universe": 0, "address": 51, "enabled": true },
     { "id": "mh_4", "name": "MH 4", "fixture": "zkymzl_11ch", "universe": 0, "address": 84, "enabled": true },
     { "id": "par_1", "name": "RGB PAR 1", "fixture": "generic_rgb_par_7ch", "universe": 0, "address": 100, "enabled": true },
     { "id": "par_2", "name": "RGB PAR 2", "fixture": "generic_rgb_par_7ch", "universe": 0, "address": 110, "enabled": true },

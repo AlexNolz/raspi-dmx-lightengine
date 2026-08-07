@@ -9,7 +9,9 @@ struct Rgb final {
     std::uint8_t g{};
     std::uint8_t b{};
 
-    bool operator==(const Rgb&) const = default;
+    bool operator==(const Rgb& other) const {
+        return r == other.r && g == other.g && b == other.b;
+    }
 };
 
 }  // namespace lightengine

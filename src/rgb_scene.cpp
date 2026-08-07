@@ -568,7 +568,7 @@ std::string RgbSceneMixer::effects_json() const {
     out << '{';
     bool first = true;
     for (const RgbSceneDefinition& definition : scene_definitions_) {
-        if (definition.id.starts_with("standby_") || definition.id.starts_with("rgb_")) {
+        if (definition.id.rfind("standby_", 0) == 0 || definition.id.rfind("rgb_", 0) == 0) {
             continue;
         }
         if (!first) {

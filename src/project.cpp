@@ -152,7 +152,7 @@ void validate_show_project(const ShowProject& project, const std::vector<Fixture
         if (!fixture_ids.insert(fixture.id).second) {
             throw std::invalid_argument{"duplicate fixture id: " + fixture.id};
         }
-        if (!definition_ids.contains(fixture.fixture_definition_id)) {
+        if (definition_ids.find(fixture.fixture_definition_id) == definition_ids.end()) {
             throw std::invalid_argument{"fixture references unknown definition: " + fixture.fixture_definition_id};
         }
     }

@@ -754,8 +754,8 @@ int main() {
         engine.apply_control_command(lightengine::SetDiscoBallCalibrationCommand{
             true, 0, true, 0.7, {0.2, 0.3, 0.4, 0.5}});
         const lightengine::DmxFrame calibration_frame = engine.render_frame(now);
-        if (!engine.output_active(now) || calibration_frame.at(50) != 51 || calibration_frame.at(52) != 179 ||
-            calibration_frame.at(58) != 235 ||
+        if (!engine.output_active(now) || calibration_frame.at(72) != 51 || calibration_frame.at(74) != 179 ||
+            calibration_frame.at(80) != 235 ||
             engine.state_json(now).find(R"("disco_ball":{"test_mode":true,"selected_head":0,"tilt":0.7,"pans":[0.2,0.3,0.4,0.5])") == std::string::npos) {
             std::cerr << "SimpleEngine did not apply the disco-ball calibration\n";
             return 1;
@@ -763,14 +763,14 @@ int main() {
         engine.apply_control_command(lightengine::SetDiscoBallCalibrationCommand{
             true, 0, false, 0.7, {0.25, 0.3, 0.8, 0.5}});
         const lightengine::DmxFrame head_one_frame = engine.render_frame(now);
-        if (head_one_frame.at(50) != 64 || head_one_frame.at(72) != calibration_frame.at(72)) {
+        if (head_one_frame.at(72) != 64 || head_one_frame.at(50) != calibration_frame.at(50)) {
             std::cerr << "Disco-ball calibration moved MH3 while MH1 was selected\n";
             return 1;
         }
         engine.apply_control_command(lightengine::SetDiscoBallCalibrationCommand{
             true, 2, false, 0.7, {0.25, 0.3, 0.8, 0.5}});
         const lightengine::DmxFrame head_three_frame = engine.render_frame(now);
-        if (head_three_frame.at(50) != head_one_frame.at(50) || head_three_frame.at(72) != 204) {
+        if (head_three_frame.at(72) != head_one_frame.at(72) || head_three_frame.at(50) != 204) {
             std::cerr << "Disco-ball calibration did not isolate MH3 from MH1\n";
             return 1;
         }
@@ -828,23 +828,23 @@ int main() {
         const lightengine::DmxFrame coordinated = engine.render_frame(now);
         const std::string coordinated_state = engine.state_json(now);
         const bool shared_first_color =
-            (coordinated_state.find(R"("color_slots":["white")") != std::string::npos && coordinated.at(54) == 8U) ||
-            (coordinated_state.find(R"("color_slots":["red")") != std::string::npos && coordinated.at(54) == 24U) ||
+            (coordinated_state.find(R"("color_slots":["white")") != std::string::npos && coordinated.at(76) == 8U) ||
+            (coordinated_state.find(R"("color_slots":["red")") != std::string::npos && coordinated.at(76) == 24U) ||
             ((coordinated_state.find(R"("color_slots":["cyan")") != std::string::npos ||
-                coordinated_state.find(R"("color_slots":["teal")") != std::string::npos) && coordinated.at(54) == 40U) ||
+                coordinated_state.find(R"("color_slots":["teal")") != std::string::npos) && coordinated.at(76) == 40U) ||
             ((coordinated_state.find(R"("color_slots":["amber")") != std::string::npos ||
-                coordinated_state.find(R"("color_slots":["orange")") != std::string::npos) && coordinated.at(54) == 56U) ||
-            (coordinated_state.find(R"("color_slots":["blue")") != std::string::npos && coordinated.at(54) == 72U) ||
+                coordinated_state.find(R"("color_slots":["orange")") != std::string::npos) && coordinated.at(76) == 56U) ||
+            (coordinated_state.find(R"("color_slots":["blue")") != std::string::npos && coordinated.at(76) == 72U) ||
             ((coordinated_state.find(R"("color_slots":["yellow")") != std::string::npos ||
-                coordinated_state.find(R"("color_slots":["acid")") != std::string::npos) && coordinated.at(54) == 88U) ||
-            (coordinated_state.find(R"("color_slots":["green")") != std::string::npos && coordinated.at(54) == 104U) ||
+                coordinated_state.find(R"("color_slots":["acid")") != std::string::npos) && coordinated.at(76) == 88U) ||
+            (coordinated_state.find(R"("color_slots":["green")") != std::string::npos && coordinated.at(76) == 104U) ||
             ((coordinated_state.find(R"("color_slots":["uv")") != std::string::npos ||
                 coordinated_state.find(R"("color_slots":["magenta")") != std::string::npos ||
-                coordinated_state.find(R"("color_slots":["pink")") != std::string::npos) && coordinated.at(54) == 120U);
+                coordinated_state.find(R"("color_slots":["pink")") != std::string::npos) && coordinated.at(76) == 120U);
         if ((coordinated.at(2) == 0U && coordinated.at(3) == 0U && coordinated.at(4) == 0U) ||
             !shared_first_color || coordinated_state.find(R"("layer_state":{"rgb_scene":)") == std::string::npos) {
             std::cerr << "Warm-up LED flood and moving-head palette colors were not coordinated: LED="
-                      << static_cast<int>(coordinated.at(2)) << " head=" << static_cast<int>(coordinated.at(54)) << '\n';
+                      << static_cast<int>(coordinated.at(2)) << " head=" << static_cast<int>(coordinated.at(76)) << '\n';
             return 1;
         }
 
@@ -914,8 +914,8 @@ int main() {
         const lightengine::DmxFrame left_beat = engine.render_frame(now);
         engine.apply_os2l_event(lightengine::Os2lBeatEvent{1, 138.0, 0.5, false, false}, now);
         const lightengine::DmxFrame right_beat = engine.render_frame(now);
-        if (left_beat.at(57) == 0U || left_beat.at(68) == 0U || left_beat.at(79) != 0U || left_beat.at(90) != 0U ||
-            right_beat.at(57) != 0U || right_beat.at(68) != 0U || right_beat.at(79) == 0U || right_beat.at(90) == 0U) {
+        if (left_beat.at(79) == 0U || left_beat.at(68) == 0U || left_beat.at(57) != 0U || left_beat.at(90) != 0U ||
+            right_beat.at(79) != 0U || right_beat.at(68) != 0U || right_beat.at(57) == 0U || right_beat.at(90) == 0U) {
             std::cerr << "Techno moving-head scene did not alternate two left/two right heads on full beats\n";
             return 1;
         }

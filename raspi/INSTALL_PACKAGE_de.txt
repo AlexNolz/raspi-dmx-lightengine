@@ -1,0 +1,32 @@
+Raspberry-Pi-Deployment aus Windows PowerShell
+================================================
+
+1. Archiv zum Raspberry Pi kopieren:
+
+   scp "$env:USERPROFILE\Downloads\raspi-dmx-lightengine-armv6.tar.gz" root@raspi-dmx:/tmp/
+
+2. Am Raspberry Pi anmelden:
+
+   ssh root@raspi-dmx
+
+3. Archiv entpacken und installieren:
+
+   mkdir -p /tmp/light-engine-deploy
+   tar -xzf /tmp/raspi-dmx-lightengine-armv6.tar.gz -C /tmp/light-engine-deploy
+   sh /tmp/light-engine-deploy/install_cpp_raspi.sh /tmp/light-engine-deploy
+
+Danach ist die Oberfläche normalerweise hier erreichbar:
+
+   http://raspi-dmx.local/
+
+Falls der Windows-PC den einfachen Hostnamen auflösen kann, funktioniert auch:
+
+   http://raspi-dmx/
+
+Status und Log auf dem Raspberry Pi prüfen:
+
+   light-engine-cpp-status
+
+Das Installationsskript setzt den Hostnamen auf raspi-dmx, installiert/aktiviert
+Avahi für .local, startet die C++ Light Engine auf Port 80 und sendet ArtNet lokal
+an 127.0.0.1 zum bereits installierten DMX-Node.

@@ -110,7 +110,7 @@ private:
     std::vector<std::string> active_palettes_;
     std::vector<std::string> active_gobos_;
     std::int64_t last_effect_change_position_{-1};
-    std::array<std::uint16_t, 4> moving_head_starts_{51, 62, 73, 84};
+    std::array<std::uint16_t, 4> moving_head_starts_{73, 62, 51, 84};
     std::array<double, 4> disco_ball_pans_{0.333, 0.333, 0.333, 0.333};
     double disco_ball_tilt_{0.68};
     std::array<std::uint16_t, 3> rgb_par_starts_{100, 110, 120};

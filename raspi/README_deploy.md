@@ -13,11 +13,13 @@ Danach deployen:
 .\deploy_to_raspi.ps1
 ```
 
-Die Weboberflaeche laeuft danach auf:
+Die C++-Weboberflaeche laeuft danach im gesamten Heimnetz auf:
 
 ```text
-http://raspi-dmx/web
+http://raspi-dmx.local/
 ```
+
+In Netzen mit lokaler Kurznamensauflösung funktioniert zusätzlich `http://raspi-dmx/`.
 
 VirtualDJ:
 
@@ -31,7 +33,7 @@ Der bestehende ArtNet-DMX-Bridge-Prozess wird als `artnet-dmx-current` gestartet
 Aktueller Pi-Stand:
 
 ```text
-light-engine:        OpenRC default, Port 80 und 9996
+light-engine-cpp:    OpenRC default, Port 80 und 9996, ArtNet lokal an 127.0.0.1
 artnet-dmx-current: OpenRC default, /root/raspi-dmx-node auf /dev/ttyAMA0
 Web:                http://raspi-dmx/web
 VirtualDJ:          os2lDirectIp = raspi-dmx:9996

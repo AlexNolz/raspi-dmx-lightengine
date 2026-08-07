@@ -283,7 +283,7 @@ std::string MotionSceneLibrary::labels_json() const {
     out << '{';
     bool first = true;
     for (const MotionSceneDefinition& scene : scenes_) {
-        if (scene.id.starts_with("standby_") || scene.id.starts_with("mh_")) {
+        if (scene.id.rfind("standby_", 0) == 0 || scene.id.rfind("mh_", 0) == 0) {
             continue;
         }
         if (!first) {
